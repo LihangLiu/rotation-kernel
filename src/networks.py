@@ -5,6 +5,7 @@ import torch.nn as nn
 from modules import RotationConv3d
 from utils.torch import weights_init
 
+
 class ConvNet3D(nn.Module):
     def __init__(self, channels, kernel_mode, num_classes, batch_norm = True):
         super(ConvNet3D, self).__init__()
@@ -39,9 +40,9 @@ class ConvNet3D(nn.Module):
         self.network = nn.Sequential(*modules)
 
         self.classifier = nn.Sequential(
-            nn.Dropout3d(p = 0.5),
+            nn.Dropout3d(.5),
             nn.Linear(self.channels[-1], 128),
-            nn.Dropout3d(p = 0.5),
+            nn.Dropout3d(.5),
             nn.Linear(128, num_classes),
         )
         self.apply(weights_init)

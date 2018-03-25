@@ -13,7 +13,7 @@ class ModelNet(Dataset):
         if self.split in ['train', 'valid']:
             self.data = self.load_data(self.data_path + '.train')
 
-            pivot = int(len(self.data) * .1)
+            pivot = int(len(self.data) * .05)
             if self.split == 'train':
                 self.data = self.data[:-pivot]
             else:

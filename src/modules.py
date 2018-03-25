@@ -45,17 +45,9 @@ class RotationConv3d(nn.Module):
 
         if self.kernel_mode == '2D+1D':
             i, o, k = self.in_channels, self.out_channels, self.kernel_size
-
-            s = int(o / 3)
-            assert s > 0
-
-            kernel_x = self.kernel_2d[:s].view(s, i, 1, k, k) * \
-                self.kernel_1d[:s].view(s, i, k, 1, 1)
-            kernel_y = self.kernel_2d[s:s * 2].view(s, i, k, 1, k) * \
-                self.kernel_1d[s:s * 2].view(s, i, 1, k, 1)
-            kernel_z = self.kernel_2d[s * 2:].view(-1, i, k, k, 1) * \
-                self.kernel_1d[s * 2:].view(-1, i, 1, 1, k)
-            kernel = torch.cat([kernel_x, kernel_y, kernel_z], 0)
+            kernel_2d = self.kernel_2d.view(o * i, k * k, 1)
+            kernel_1d = self.kernel_1d.view(o * i, 1, k)
+            kernel = torch.bmm(kernel_2d, kernel_1d).view(o, i, k, k, k)
 
         outputs = F.conv3d(inputs, kernel, bias = self.bias, stride = self.stride, padding = self.padding)
         return outputs
