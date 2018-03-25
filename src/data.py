@@ -10,30 +10,13 @@ class ModelNet(Dataset):
         self.split = split
         self.resolution = resolution
 
-        if self.split in ['train', 'valid']:
-            self.data = self.load_data(self.data_path + '.train')
-
-            pivot = int(len(self.data) * .05)
-            if self.split == 'train':
-                self.data = self.data[:-pivot]
-            else:
-                self.data = self.data[-pivot:]
-        elif self.split == 'test':
-            self.data = self.load_data(self.data_path + '.test')
-        else:
-            raise AssertionError('unsupported data split "{0}"'.format(self.split))
+        self.data = self.load_data(os.path.join(self.data_path, '{0}-{1}.txt'.format(self.split, self.resolution)))
 
     def load_data(self, path):
-        data_path = os.path.dirname(path)
-
         data = []
         for line in open(path, 'r'):
-            line = line.strip().split()
-            if len(line) != 2:
-                raise AssertionError('parsing error at {0} (line: {1})'.format(path, line))
-
-            obj_path, syn_id = line
-            data.append((os.path.join(data_path, obj_path), syn_id))
+            a, b = line.strip().split()
+            data.append((os.path.join(self.data_path, a), b))
         return data
 
     def __getitem__(self, index):

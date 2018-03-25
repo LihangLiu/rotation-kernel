@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import argparse
 import os
 
@@ -22,9 +24,10 @@ if __name__ == '__main__':
     parser.add_argument('--gpu', default = '0')
 
     # dataset
-    parser.add_argument('--data_path', default = '../data/ModelNet_list/npy_list.30.points')
+    parser.add_argument('--data_path', default = '../data/')
+    parser.add_argument('--resolution', default = 32, type = int)
     parser.add_argument('--workers', default = 8, type = int)
-    parser.add_argument('--batch', default = 32, type = int)
+    parser.add_argument('--batch', default = 64, type = int)
 
     # network
     parser.add_argument('--kernel_mode', default = None, choices = ['3D', '2D+1D'])
@@ -46,7 +49,7 @@ if __name__ == '__main__':
     # datasets & loaders
     data, loaders = {}, {}
     for split in ['train', 'valid', 'test']:
-        data[split] = ModelNet(data_path = args.data_path, split = split)
+        data[split] = ModelNet(data_path = args.data_path, split = split, resolution = args.resolution)
         loaders[split] = DataLoader(data[split], batch_size = args.batch, shuffle = True, num_workers = args.workers)
     print('==> dataset loaded')
     print('[size] = {0} + {1} + {2}'.format(len(data['train']), len(data['valid']), len(data['test'])))
