@@ -10,7 +10,18 @@ class ModelNet(Dataset):
         self.split = split
         self.resolution = resolution
 
-        self.data = self.load_data(self.data_path + '.' + self.split)
+        if self.split in ['train', 'valid']:
+            self.data = self.load_data(self.data_path + '.train')
+
+            pivot = int(len(self.data) * .1)
+            if self.split == 'train':
+                self.data = self.data[:-pivot]
+            else:
+                self.data = self.data[-pivot:]
+        elif self.split == 'test':
+            self.data = self.load_data(self.data_path + '.test')
+        else:
+            raise AssertionError('unsupported data split "{0}"'.format(self.split))
 
     def load_data(self, path):
         data_path = os.path.dirname(path)

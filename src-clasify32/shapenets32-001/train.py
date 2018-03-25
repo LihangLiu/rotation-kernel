@@ -13,7 +13,7 @@ import sys
 
 import _init_paths
 import dataset_clasify as dataset
-from model import ConvNet, weights_init
+from networks import ConvNet3D, weights_init
 import config as myconfig
 
 def fetch_lastest_param_path(param_prefix, start_i, end_i):
@@ -60,7 +60,7 @@ if __name__ == '__main__':
     #############
     # build net
     #############
-    net = ConvNet(nf=nf, num_syns=myconfig.NUM_SYNS)
+    net = ConvNet3D(channels =nf, num_classes =myconfig.NUM_SYNS)
     net.cuda()
     criterion = nn.CrossEntropyLoss().cuda()
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, net.parameters()), lr=learning_rate)

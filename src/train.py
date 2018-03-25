@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from data import ModelNet
-from model import ConvNet
+from networks import ConvNet3D
 from utils import set_cuda_devices
 from utils.shell import mkdir
 from utils.torch import ClassErrorMeter, Logger, load_snapshot, save_snapshot, to_var
@@ -26,6 +26,9 @@ if __name__ == '__main__':
     parser.add_argument('--workers', default = 8, type = int)
     parser.add_argument('--batch', default = 32, type = int)
 
+    # network
+    parser.add_argument('--kernel_mode', default = None, choices = ['3D', '2D+1D'])
+
     # training
     parser.add_argument('--epochs', default = 64, type = int)
     parser.add_argument('--snapshot', default = 1, type = int)
@@ -42,14 +45,18 @@ if __name__ == '__main__':
 
     # datasets & loaders
     data, loaders = {}, {}
-    for split in ['train', 'test']:
+    for split in ['train', 'valid', 'test']:
         data[split] = ModelNet(data_path = args.data_path, split = split)
         loaders[split] = DataLoader(data[split], batch_size = args.batch, shuffle = True, num_workers = args.workers)
     print('==> dataset loaded')
-    print('[size] = {0} + {1}'.format(len(data['train']), len(data['test'])))
+    print('[size] = {0} + {1} + {2}'.format(len(data['train']), len(data['valid']), len(data['test'])))
 
     # model & criterion
-    model = ConvNet(nf = 32, num_syns = 40).cuda()
+    model = ConvNet3D(
+        channels = [1, 32, 64, 128, 256, 512],
+        kernel_mode = args.kernel_mode,
+        num_classes = 40,
+    ).cuda()
     criterion = nn.CrossEntropyLoss().cuda()
 
     # optimizer
@@ -97,7 +104,7 @@ if __name__ == '__main__':
 
         # testing
         model.eval()
-        for split in ['train', 'test']:
+        for split in ['train', 'valid', 'test']:
             meter = ClassErrorMeter()
 
             for inputs, targets in tqdm(loaders[split], desc = split):
