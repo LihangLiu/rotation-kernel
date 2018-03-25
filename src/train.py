@@ -27,8 +27,8 @@ if __name__ == '__main__':
     parser.add_argument('--batch', default = 32, type = int)
 
     # training
-    parser.add_argument('--epochs', default = 128, type = int)
-    parser.add_argument('--snapshot', default = 8, type = int)
+    parser.add_argument('--epochs', default = 64, type = int)
+    parser.add_argument('--snapshot', default = 1, type = int)
     parser.add_argument('--learning_rate', default = 0.0001, type = float)
 
     # arguments
@@ -48,7 +48,7 @@ if __name__ == '__main__':
     print('==> dataset loaded')
     print('[size] = {0} + {1}'.format(len(data['train']), len(data['test'])))
 
-    # model
+    # model & criterion
     model = ConvNet(nf = 32, num_syns = 40).cuda()
     criterion = nn.CrossEntropyLoss().cuda()
 
