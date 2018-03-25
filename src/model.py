@@ -55,6 +55,7 @@ class ConvNet(nn.Module):
             nn.Dropout3d(p = 0.5),
             nn.Linear(128, num_syns),
         )
+        self.apply(weights_init)
 
     def forward(self, input):
         output = self.main(input)
