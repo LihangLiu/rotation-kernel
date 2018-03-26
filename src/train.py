@@ -31,6 +31,8 @@ if __name__ == '__main__':
 
     # network
     parser.add_argument('--kernel_mode', default = None, choices = ['3D', '2D+1D'])
+
+    # distillation
     parser.add_argument('--teacher', default = None)
 
     # training
@@ -55,12 +57,26 @@ if __name__ == '__main__':
     print('==> dataset loaded')
     print('[size] = {0} + {1} + {2}'.format(len(data['train']), len(data['valid']), len(data['test'])))
 
-    # model & criterion
+    # model
     model = ConvNet3D(
         channels = [1, 32, 64, 128, 256, 512],
         kernel_mode = args.kernel_mode,
         num_classes = 40,
     ).cuda()
+
+    # teacher
+    if args.teacher is not None:
+        targs = load_snapshot(args.teacher, returns = 'args')
+
+        teacher = ConvNet3D(
+            channels = [1, 32, 64, 128, 256, 512],
+            kernel_mode = targs.kernel_mode,
+            num_classes = 40,
+        ).cuda()
+
+        load_snapshot(args.teacher, model = teacher)
+
+    # criterion
     criterion = nn.CrossEntropyLoss().cuda()
 
     # optimizer
@@ -73,12 +89,12 @@ if __name__ == '__main__':
     else:
         epoch = 0
 
-    # experiment path
-    exp_path = os.path.join('..', 'exp', args.exp)
-    mkdir(exp_path, clean = False)
+    # save path
+    save_path = os.path.join('..', 'exp', args.exp)
+    mkdir(save_path, clean = False)
 
     # logger
-    logger = Logger(exp_path)
+    logger = Logger(save_path)
 
     # iterations
     for epoch in range(epoch, args.epochs):
@@ -117,25 +133,17 @@ if __name__ == '__main__':
 
                 # forward
                 outputs = model(inputs)
+
+                # meter
                 meter.add(outputs, targets)
 
             # logger
             logger.scalar_summary('{0}-accuracy'.format(split), meter.value(), step)
 
         # snapshot
-        save_snapshot(
-            path = os.path.join(exp_path, 'latest.pth'),
-            model = model,
-            optimizer = optimizer,
-            epoch = epoch + 1,
-            args = args
-        )
+        save_snapshot(os.path.join(save_path, 'latest.pth'),
+                      model = model, optimizer = optimizer, epoch = epoch + 1)
 
         if args.snapshot != 0 and (epoch + 1) % args.snapshot == 0:
-            save_snapshot(
-                path = os.path.join(exp_path, 'epoch-{0}.pth'.format(epoch + 1)),
-                model = model,
-                optimizer = optimizer,
-                epoch = epoch + 1,
-                args = args
-            )
+            save_snapshot(os.path.join(save_path, 'epoch-{0}.pth'.format(epoch + 1)),
+                          model = model, optimizer = optimizer, epoch = epoch + 1)
