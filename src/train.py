@@ -109,7 +109,10 @@ if __name__ == '__main__':
 
             # forward
             optimizer.zero_grad()
-            outputs = model(inputs)
+            outputs = model.forward(inputs)
+
+            if args.teacher is not None:
+                results = teacher.forward(inputs)
 
             # loss
             loss = criterion(outputs, targets)
@@ -132,7 +135,7 @@ if __name__ == '__main__':
                 targets = to_var(targets, type = 'long', volatile = True)
 
                 # forward
-                outputs = model(inputs)
+                outputs = model.forward(inputs)
 
                 # meter
                 meter.add(outputs, targets)
