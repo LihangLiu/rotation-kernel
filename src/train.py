@@ -9,12 +9,17 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from data import ModelNet
+from modules import registered_kernels
 from networks import ConvNet3D
 from utils import set_cuda_devices
 from utils.shell import mkdir
 from utils.torch import ClassErrorMeter, Logger, load_snapshot, save_snapshot, to_var
 
+
 if __name__ == '__main__':
+    # registered kernels
+    kernel_dict = registered_kernels()
+
     # argument parser
     parser = argparse.ArgumentParser()
 
@@ -30,7 +35,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch', default = 64, type = int)
 
     # network
-    parser.add_argument('--kernel_mode', default = None, choices = ['3D', '2D+1D'])
+    parser.add_argument('--kernel_mode', default = None, choices = kernel_dict.keys())
 
     # training
     parser.add_argument('--epochs', default = 64, type = int)
@@ -44,7 +49,7 @@ if __name__ == '__main__':
         print('[{0}] = {1}'.format(key, getattr(args, key)))
 
     # cuda devices
-    set_cuda_devices(args.gpu)
+    # set_cuda_devices(args.gpu)
 
     # datasets & loaders
     data, loaders = {}, {}
@@ -57,7 +62,7 @@ if __name__ == '__main__':
     # model & criterion
     model = ConvNet3D(
         channels = [1, 32, 64, 128, 256, 512],
-        kernel_mode = args.kernel_mode,
+        kernel_class = kernel_dict[args.kernel_mode],
         num_classes = 40,
     ).cuda()
     criterion = nn.CrossEntropyLoss().cuda()

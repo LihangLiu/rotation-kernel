@@ -2,15 +2,14 @@ from __future__ import print_function
 
 import torch.nn as nn
 
-from modules import RotationConv3d
 from utils.torch import weights_init
 
 
 class ConvNet3D(nn.Module):
-    def __init__(self, channels, kernel_mode, num_classes, batch_norm = True):
+    def __init__(self, channels, kernel_class, num_classes, batch_norm = True):
         super(ConvNet3D, self).__init__()
         self.channels = channels
-        self.kernel_mode = kernel_mode
+        self.kernel_class = kernel_class
         self.num_classes = num_classes
         self.batch_norm = batch_norm
 
@@ -21,11 +20,10 @@ class ConvNet3D(nn.Module):
             in_channels = self.channels[k]
             out_channels = self.channels[k + 1]
 
-            modules.append(RotationConv3d(
+            modules.append(self.kernel_class(
                 in_channels = in_channels,
                 out_channels = out_channels,
                 kernel_size = 4,
-                kernel_mode = self.kernel_mode,
                 stride = 1,
                 padding = 1,
                 bias = False
