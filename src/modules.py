@@ -50,15 +50,3 @@ class ConvRotate3d(nn.Module):
 
         outputs = F.conv3d(inputs, kernel, bias = self.bias, stride = self.stride, padding = self.padding)
         return outputs
-
-    # def __repr__(self):
-    #     s = self.__class__.__name__
-    #     s += '('
-    #     s += 'in=%d, ' % (self.in_channels)
-    #     s += 'out=%d, ' % (self.out_channels)
-    #     s += 'kernel_size=%d, ' % (self.kernel_size)
-    #     s += 'stride=%d, ' % (self.stride)
-    #     s += 'padding=%d, ' % (self.padding)
-    #     s += 'bias=%d, ' % (self.bias is None)
-    #     s += ')'
-    #     return s.format(name = self.__class__.__name__, **self.__dict__)
