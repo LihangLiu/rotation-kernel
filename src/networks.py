@@ -3,7 +3,7 @@ from __future__ import print_function
 import torch.nn as nn
 
 from modules import ConvRotate3d
-from utils.torch import weights_init
+from utils.torch import weights_init, LinearPool
 
 
 class ConvNet3D(nn.Module):
@@ -14,12 +14,12 @@ class ConvNet3D(nn.Module):
         self.num_classes = num_classes
         self.batch_norm = batch_norm
 
-        extractor = []
+        modules = []
         for k in range(len(self.channels) - 1):
             in_channels = self.channels[k]
             out_channels = self.channels[k + 1]
 
-            extractor.append(ConvRotate3d(
+            modules.append(ConvRotate3d(
                 in_channels = in_channels,
                 out_channels = out_channels,
                 kernel_size = 4,
@@ -30,21 +30,24 @@ class ConvNet3D(nn.Module):
             ))
 
             if self.batch_norm:
-                extractor.append(nn.BatchNorm3d(out_channels))
+                modules.append(nn.BatchNorm3d(
+                    num_features = out_channels
+                ))
 
-            extractor.append(nn.LeakyReLU(0.2, True))
-            extractor.append(nn.MaxPool3d(
+            modules.append(nn.LeakyReLU(
+                negative_slope = 0.2,
+                inplace = True
+            ))
+            modules.append(nn.MaxPool3d(
                 kernel_size = 3,
                 stride = 2,
                 padding = 1
             ))
 
-        self.extractor = nn.Sequential(*extractor)
-        self.classifier = nn.Sequential(
-            nn.Dropout3d(.5),
-            nn.Linear(self.channels[-1], 128),
-            nn.Dropout3d(.5),
-            nn.Linear(128, num_classes),
+        self.extractor = nn.Sequential(*modules)
+        self.classifier = LinearPool(
+            features = [self.channels[-1]] + [128, self.num_classes],
+            batch_norm = self.batch_norm
         )
         self.apply(weights_init)
 
