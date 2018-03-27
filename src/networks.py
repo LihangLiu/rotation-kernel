@@ -2,7 +2,7 @@ from __future__ import print_function
 
 import torch.nn as nn
 
-from modules import RotationConv3d
+from modules import ConvRotate3d
 from utils.torch import weights_init
 
 
@@ -21,7 +21,7 @@ class ConvNet3D(nn.Module):
             in_channels = self.channels[k]
             out_channels = self.channels[k + 1]
 
-            modules.append(RotationConv3d(
+            modules.append(ConvRotate3d(
                 in_channels = in_channels,
                 out_channels = out_channels,
                 kernel_size = 4,

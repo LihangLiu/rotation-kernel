@@ -30,7 +30,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch', default = 64, type = int)
 
     # network
-    parser.add_argument('--kernel_mode', default = None, choices = ['3D', '2D+1D'])
+    parser.add_argument('--kernel_mode', default = None, choices = ['3d', '2d+1d'])
 
     # distillation
     parser.add_argument('--teacher', default = None)
@@ -113,6 +113,8 @@ if __name__ == '__main__':
 
             if args.teacher is not None:
                 results = teacher.forward(inputs)
+                print(outputs.size(), results.size())
+
 
             # loss
             loss = criterion(outputs, targets)
