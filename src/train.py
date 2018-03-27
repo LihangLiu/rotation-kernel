@@ -114,7 +114,8 @@ if __name__ == '__main__':
             if args.teacher is not None:
                 results = teacher.forward(inputs)
                 print(outputs.size(), results.size())
-
+                print(outputs[0])
+                print(results[0])
 
             # loss
             loss = criterion(outputs, targets)
@@ -138,17 +139,25 @@ if __name__ == '__main__':
 
                 # forward
                 outputs = model.forward(inputs)
-
-                # meter
                 meter.add(outputs, targets)
 
             # logger
             logger.scalar_summary('{0}-accuracy'.format(split), meter.value(), step)
 
         # snapshot
-        save_snapshot(os.path.join(save_path, 'latest.pth'),
-                      model = model, optimizer = optimizer, epoch = epoch + 1)
+        save_snapshot(
+            path = os.path.join(save_path, 'latest.pth'),
+            model = model,
+            optimizer = optimizer,
+            epoch = epoch + 1,
+            args = args
+        )
 
         if args.snapshot != 0 and (epoch + 1) % args.snapshot == 0:
-            save_snapshot(os.path.join(save_path, 'epoch-{0}.pth'.format(epoch + 1)),
-                          model = model, optimizer = optimizer, epoch = epoch + 1)
+            save_snapshot(
+                path = os.path.join(save_path, 'epoch-{0}.pth'.format(epoch + 1)),
+                model = model,
+                optimizer = optimizer,
+                epoch = epoch + 1,
+                args = args
+            )

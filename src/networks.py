@@ -14,14 +14,12 @@ class ConvNet3D(nn.Module):
         self.num_classes = num_classes
         self.batch_norm = batch_norm
 
-        num_layers = len(self.channels) - 1
-
-        modules = []
-        for k in range(num_layers):
+        extractor = []
+        for k in range(len(self.channels) - 1):
             in_channels = self.channels[k]
             out_channels = self.channels[k + 1]
 
-            modules.append(ConvRotate3d(
+            extractor.append(ConvRotate3d(
                 in_channels = in_channels,
                 out_channels = out_channels,
                 kernel_size = 4,
@@ -32,13 +30,16 @@ class ConvNet3D(nn.Module):
             ))
 
             if self.batch_norm:
-                modules.append(nn.BatchNorm3d(out_channels))
+                extractor.append(nn.BatchNorm3d(out_channels))
 
-            modules.append(nn.LeakyReLU(0.2, True))
-            modules.append(nn.MaxPool3d(3, stride = 2, padding = 1))
+            extractor.append(nn.LeakyReLU(0.2, True))
+            extractor.append(nn.MaxPool3d(
+                kernel_size = 3,
+                stride = 2,
+                padding = 1
+            ))
 
-        self.network = nn.Sequential(*modules)
-
+        self.extractor = nn.Sequential(*extractor)
         self.classifier = nn.Sequential(
             nn.Dropout3d(.5),
             nn.Linear(self.channels[-1], 128),
@@ -48,7 +49,6 @@ class ConvNet3D(nn.Module):
         self.apply(weights_init)
 
     def forward(self, inputs):
-        outputs = self.network.forward(inputs)
-        outputs = outputs.view(outputs.size(0), -1)
-        outputs = self.classifier.forward(outputs)
+        features = self.extractor.forward(inputs).view(inputs.size(0), -1)
+        outputs = self.classifier.forward(features)
         return outputs
