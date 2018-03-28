@@ -9,17 +9,12 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from data import ModelNet
-from modules import registered_kernels
 from networks import ConvNet3D
 from utils import set_cuda_devices
 from utils.shell import mkdir
 from utils.torch import ClassErrorMeter, Logger, load_snapshot, save_snapshot, to_var
 
-
 if __name__ == '__main__':
-    # registered kernels
-    kernel_dict = registered_kernels()
-
     # argument parser
     parser = argparse.ArgumentParser()
 
@@ -35,7 +30,9 @@ if __name__ == '__main__':
     parser.add_argument('--batch', default = 64, type = int)
 
     # network
-    parser.add_argument('--kernel_mode', default = None, choices = kernel_dict.keys())
+    parser.add_argument('--kernel_mode', default = None, choices = ['3d', '2d+1d'])
+
+    # distillation
     parser.add_argument('--teacher', default = None)
 
     # training
@@ -50,7 +47,7 @@ if __name__ == '__main__':
         print('[{0}] = {1}'.format(key, getattr(args, key)))
 
     # cuda devices
-    # set_cuda_devices(args.gpu)
+    set_cuda_devices(args.gpu)
 
     # datasets & loaders
     data, loaders = {}, {}
@@ -60,12 +57,26 @@ if __name__ == '__main__':
     print('==> dataset loaded')
     print('[size] = {0} + {1} + {2}'.format(len(data['train']), len(data['valid']), len(data['test'])))
 
-    # model & criterion
+    # model
     model = ConvNet3D(
         channels = [1, 32, 64, 128, 256, 512],
-        kernel_class = kernel_dict[args.kernel_mode],
+        kernel_mode = args.kernel_mode,
         num_classes = 40,
     ).cuda()
+
+    # teacher
+    if args.teacher is not None:
+        targs = load_snapshot(args.teacher, returns = 'args')
+
+        teacher = ConvNet3D(
+            channels = [1, 32, 64, 128, 256, 512],
+            kernel_mode = targs.kernel_mode,
+            num_classes = 40,
+        ).cuda()
+
+        load_snapshot(args.teacher, model = teacher)
+
+    # criterion
     criterion = nn.CrossEntropyLoss().cuda()
 
     # optimizer
@@ -78,12 +89,12 @@ if __name__ == '__main__':
     else:
         epoch = 0
 
-    # experiment path
-    exp_path = os.path.join('..', 'exp', args.exp)
-    mkdir(exp_path, clean = False)
+    # save path
+    save_path = os.path.join('..', 'exp', args.exp)
+    mkdir(save_path, clean = False)
 
     # logger
-    logger = Logger(exp_path)
+    logger = Logger(save_path)
 
     # iterations
     for epoch in range(epoch, args.epochs):
@@ -98,7 +109,13 @@ if __name__ == '__main__':
 
             # forward
             optimizer.zero_grad()
-            outputs = model(inputs)
+            outputs = model.forward(inputs)
+
+            if args.teacher is not None:
+                results = teacher.forward(inputs)
+                print(outputs.size(), results.size())
+                print(outputs[0])
+                print(results[0])
 
             # loss
             loss = criterion(outputs, targets)
@@ -121,7 +138,7 @@ if __name__ == '__main__':
                 targets = to_var(targets, type = 'long', volatile = True)
 
                 # forward
-                outputs = model(inputs)
+                outputs = model.forward(inputs)
                 meter.add(outputs, targets)
 
             # logger
@@ -129,7 +146,7 @@ if __name__ == '__main__':
 
         # snapshot
         save_snapshot(
-            path = os.path.join(exp_path, 'latest.pth'),
+            path = os.path.join(save_path, 'latest.pth'),
             model = model,
             optimizer = optimizer,
             epoch = epoch + 1,
@@ -138,7 +155,7 @@ if __name__ == '__main__':
 
         if args.snapshot != 0 and (epoch + 1) % args.snapshot == 0:
             save_snapshot(
-                path = os.path.join(exp_path, 'epoch-{0}.pth'.format(epoch + 1)),
+                path = os.path.join(save_path, 'epoch-{0}.pth'.format(epoch + 1)),
                 model = model,
                 optimizer = optimizer,
                 epoch = epoch + 1,
