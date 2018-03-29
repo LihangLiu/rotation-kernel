@@ -17,13 +17,13 @@ class ConvRotate3d(nn.Module):
         self.padding = padding
         self.bias = bias
 
-        if self.kernel_mode == '3d':
+        if '3d' in self.kernel_mode:
             self.weights = nn.Parameter(torch.zeros(
                 self.out_channels, self.in_channels, self.kernel_size, self.kernel_size, self.kernel_size
             ))
             nn.init.normal(self.weights, std = 0.02)
 
-        if self.kernel_mode == '2d+1d':
+        if '2d+1d' in self.kernel_mode:
             self.weights_2d = nn.Parameter(torch.zeros(
                 self.out_channels, self.in_channels, self.kernel_size, self.kernel_size
             ))
@@ -34,9 +34,10 @@ class ConvRotate3d(nn.Module):
             ))
             nn.init.normal(self.weights_1d, std = 0.02)
 
-        self.rotation = BasicRotation(
-            self.in_channels, self.out_channels, self.kernel_size
-        )
+        if 'rot' in self.kernel_mode:
+            self.rotation = BasicRotation(
+                self.in_channels, self.out_channels, self.kernel_size
+            )
 
         if self.bias:
             self.bias = nn.Parameter(torch.zeros(self.out_channels))
@@ -44,17 +45,19 @@ class ConvRotate3d(nn.Module):
             self.bias = None
 
     def forward(self, inputs):
-        if self.kernel_mode == '3d':
+        if '3d' in self.kernel_mode:
             weights = self.weights
 
-        if self.kernel_mode == '2d+1d':
+        if '2d+1d' in self.kernel_mode:
             i, o, k = self.in_channels, self.out_channels, self.kernel_size
             weights_2d = self.weights_2d.view(o * i, k * k, 1)
             weights_1d = self.weights_1d.view(o * i, 1, k)
             weights = torch.bmm(weights_2d, weights_1d).view(o, i, k, k, k)
 
-        rotated_filter = self.rotation(weights)
-        outputs = F.conv3d(inputs, rotated_filter, bias = self.bias, stride = self.stride, padding = self.padding)
+        if 'rot' in self.kernel_mode:
+            weights = self.rotation.forward(weights)
+
+        outputs = F.conv3d(inputs, weights, bias = self.bias, stride = self.stride, padding = self.padding)
         return outputs
 
 class BasicRotation(nn.Module):
