@@ -12,11 +12,11 @@ class ModelNet(Dataset):
 
         self.data = self.load_data(os.path.join(self.data_path, '{0}-{1}.txt'.format(self.split, self.voxel_size)))
 
-    def load_data(self, path):
+    def load_data(self, split_path):
         data = []
-        for line in open(path, 'r'):
-            a, category = line.strip().split()
-            data.append((os.path.join(self.data_path, a), category))
+        for line in open(split_path, 'r'):
+            data_path, category = line.strip().split()
+            data.append((os.path.join(self.data_path, data_path), category))
         return data
 
     def __getitem__(self, index):

@@ -30,7 +30,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch', default = 64, type = int)
 
     # network
-    parser.add_argument('--kernel_mode', default = None, choices = ['3d', '2d+1d'])
+    parser.add_argument('--kernel_mode', default = None, choices = ['3d', '2d+1d', '3d+rot', '2d+1d+rot'])
 
     # distillation
     parser.add_argument('--teacher', default = None)
@@ -93,8 +93,10 @@ if __name__ == '__main__':
     param_dict = dict(model.named_parameters())
     weight_params = [param_dict[k] for k in param_dict if 'theta' not in k]
     theta_params = [param_dict[k] for k in param_dict if 'theta' in k]
-    weight_optim = torch.optim.Adam(weight_params, lr=args.learning_rate)
-    theta_optim = torch.optim.Adam(theta_params, lr=args.lr_theta)
+    weight_optim = torch.optim.Adam(weight_params, lr = args.learning_rate)
+    theta_optim = torch.optim.Adam(theta_params, lr = args.lr_theta)
+
+    # optimizer = torch.optim.Adam(model.parameters(), lr = args.learning_rate)
 
     # load snapshot
     if args.resume is not None:
