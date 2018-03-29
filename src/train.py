@@ -89,14 +89,19 @@ if __name__ == '__main__':
     # criterion
     criterion = nn.CrossEntropyLoss().cuda()
 
-    # optimizer
-    param_dict = dict(model.named_parameters())
-    weight_params = [param_dict[k] for k in param_dict if 'theta' not in k]
-    theta_params = [param_dict[k] for k in param_dict if 'theta' in k]
-    weight_optim = torch.optim.Adam(weight_params, lr = args.learning_rate)
-    theta_optim = torch.optim.Adam(theta_params, lr = args.lr_theta)
-
-    # optimizer = torch.optim.Adam(model.parameters(), lr = args.learning_rate)
+    # optimizers
+    if 'rot' not in args.kernel_mode:
+        optimizers = [
+            torch.optim.Adam(model.parameters(), lr = args.learning_rate)
+        ]
+    else:
+        param_dict = dict(model.named_parameters())
+        weight_params = [param_dict[k] for k in param_dict if 'theta' not in k]
+        theta_params = [param_dict[k] for k in param_dict if 'theta' in k]
+        optimizers = [
+            torch.optim.Adam(weight_params, lr = args.learning_rate),
+            torch.optim.Adam(theta_params, lr = args.lr_theta)
+        ]
 
     # load snapshot
     if args.resume is not None:
@@ -117,10 +122,8 @@ if __name__ == '__main__':
         step = epoch * len(data['train'])
         print('==> epoch {0} (starting from step {1})'.format(epoch + 1, step + 1))
 
-        if epoch % 2 == 0:
-            optimizer = weight_optim
-        else:
-            optimizer = theta_optim
+        # optimizer
+        optimizer = optimizers[epoch % len(optimizers)]
 
         # training
         model.train()
