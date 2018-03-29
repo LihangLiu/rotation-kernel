@@ -145,7 +145,7 @@ if __name__ == '__main__':
             loss = criterion(outputs, targets)
 
             # logger
-            logger.scalar_summary('train-loss', loss.data[0], step)
+            logger.scalar_summary('train-loss', loss.item(), step)
             step += targets.size(0)
 
             # backward
