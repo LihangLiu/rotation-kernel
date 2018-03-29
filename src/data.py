@@ -16,7 +16,7 @@ class ModelNet(Dataset):
         data = []
         for line in open(split_path, 'r'):
             data_path, category = line.strip().split()
-            data.append((os.path.join(self.data_path, data_path), category))
+            data.append((os.path.join(self.data_path, data_path), np.int(category)))
         return data
 
     def __getitem__(self, index):
@@ -30,7 +30,7 @@ class ModelNet(Dataset):
         input = np.zeros((1, self.voxel_size, self.voxel_size, self.voxel_size))
         input[0, x, y, z] = 1
 
-        return np.array(input), np.int(target)
+        return input, target
 
     def __len__(self):
         return len(self.data)

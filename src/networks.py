@@ -7,12 +7,13 @@ from utils.torch import weights_init, LinearPool
 
 
 class ConvNet3D(nn.Module):
-    def __init__(self, channels, kernel_mode, num_classes, batch_norm = True):
+    def __init__(self, channels, kernel_mode, num_classes, batch_norm = True, dropout = 0.5):
         super(ConvNet3D, self).__init__()
         self.channels = channels
         self.kernel_mode = kernel_mode
         self.num_classes = num_classes
         self.batch_norm = batch_norm
+        self.dropout = dropout
 
         layers = []
         for k in range(len(self.channels) - 1):
@@ -47,7 +48,8 @@ class ConvNet3D(nn.Module):
         self.extractor = nn.Sequential(*layers)
         self.classifier = LinearPool(
             features = [self.channels[-1]] + [128] + [self.num_classes],
-            batch_norm = self.batch_norm
+            batch_norm = self.batch_norm,
+            dropout = self.dropout
         )
         self.apply(weights_init)
 
