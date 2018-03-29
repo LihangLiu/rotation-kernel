@@ -52,8 +52,17 @@ if __name__ == '__main__':
     # datasets & loaders
     data, loaders = {}, {}
     for split in ['train', 'valid', 'test']:
-        data[split] = ModelNet(data_path = args.data_path, split = split, voxel_size = args.voxel_size)
-        loaders[split] = DataLoader(data[split], batch_size = args.batch, shuffle = True, num_workers = args.workers)
+        data[split] = ModelNet(
+            data_path = args.data_path,
+            split = split,
+            voxel_size = args.voxel_size
+        )
+        loaders[split] = DataLoader(
+            dataset = data[split],
+            batch_size = args.batch,
+            shuffle = True,
+            num_workers = args.workers
+        )
     print('==> dataset loaded')
     print('[size] = {0} + {1} + {2}'.format(len(data['train']), len(data['valid']), len(data['test'])))
 
@@ -130,6 +139,8 @@ if __name__ == '__main__':
 
         # testing
         model.eval()
+
+        accuracy = {}
         for split in ['train', 'valid', 'test']:
             meter = ClassErrorMeter()
 
@@ -141,14 +152,18 @@ if __name__ == '__main__':
                 outputs = model.forward(inputs)
                 meter.add(outputs, targets)
 
-            # logger
-            logger.scalar_summary('{0}-accuracy'.format(split), meter.value(), step)
+            accuracy[split] = meter.value()
+
+        # logger
+        for split in ['train', 'valid', 'test']:
+            logger.scalar_summary('{0}-accuracy'.format(split), accuracy[split], step)
 
         # snapshot
         save_snapshot(
             path = os.path.join(save_path, 'latest.pth'),
             model = model,
             optimizer = optimizer,
+            accuracy = accuracy,
             epoch = epoch + 1,
             args = args
         )
@@ -158,6 +173,7 @@ if __name__ == '__main__':
                 path = os.path.join(save_path, 'epoch-{0}.pth'.format(epoch + 1)),
                 model = model,
                 optimizer = optimizer,
+                accuracy = accuracy,
                 epoch = epoch + 1,
                 args = args
             )

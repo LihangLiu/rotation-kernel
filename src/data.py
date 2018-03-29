@@ -5,7 +5,7 @@ from torch.utils.data import Dataset
 
 
 class ModelNet(Dataset):
-    def __init__(self, data_path, split, voxel_size = 32):
+    def __init__(self, data_path, split, voxel_size):
         self.data_path = data_path
         self.split = split
         self.voxel_size = voxel_size
@@ -15,20 +15,20 @@ class ModelNet(Dataset):
     def load_data(self, path):
         data = []
         for line in open(path, 'r'):
-            a, b = line.strip().split()
-            data.append((os.path.join(self.data_path, a), b))
+            a, category = line.strip().split()
+            data.append((os.path.join(self.data_path, a), category))
         return data
 
     def __getitem__(self, index):
-        path, target = self.data[index]
+        data_path, target = self.data[index]
 
-        points = np.load(path)
-        xs = points[:, 0].astype(int)
-        ys = points[:, 1].astype(int)
-        zs = points[:, 2].astype(int)
+        data = np.load(data_path)
+        x = data[:, 0].astype(int)
+        y = data[:, 1].astype(int)
+        z = data[:, 2].astype(int)
 
         input = np.zeros((1, self.voxel_size, self.voxel_size, self.voxel_size))
-        input[0, xs, ys, zs] = 1
+        input[0, x, y, z] = 1
 
         return np.array(input), np.int(target)
 
