@@ -4,7 +4,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.autograd import Variable
+
+from utils.torch import to_var
 
 
 class ConvRotate3d(nn.Module):
@@ -36,9 +37,11 @@ class ConvRotate3d(nn.Module):
             nn.init.normal(self.weights_1d, std = 0.02)
 
         if 'rot' in self.kernel_mode:
-            self.rotation = Rotation(
-                self.in_channels, self.out_channels, self.kernel_size
-            )
+            self.theta_v = nn.Parameter(torch.zeros(self.out_channels * self.in_channels, 3))  # (o*i, 3)
+            nn.init.uniform(self.theta_v, a = 0, b = 1)
+
+            self.theta = nn.Parameter(torch.zeros(self.out_channels * self.in_channels))  # (o*i)
+            nn.init.uniform(self.theta, a = 0, b = np.pi)
 
         if self.bias:
             self.bias = nn.Parameter(torch.zeros(self.out_channels))
@@ -56,97 +59,58 @@ class ConvRotate3d(nn.Module):
             weights = torch.bmm(weights_2d, weights_1d).view(o, i, k, k, k)
 
         if 'rot' in self.kernel_mode:
-            weights = self.rotation.forward(weights)
+            weights = rotate(weights, self.theta_v, self.theta)
 
         outputs = F.conv3d(inputs, weights, bias = self.bias, stride = self.stride, padding = self.padding)
         return outputs
 
 
-class Rotation(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size):
-        super(Rotation, self).__init__()
-        self.in_channels = in_channels
-        self.out_channels = out_channels
-        self.kernel_size = kernel_size
+def rotate(inputs, theta_v, theta):
+    i, o, k = inputs.size(0), inputs.size(1), inputs.size(2)
 
-        self.theta_v = nn.Parameter(torch.zeros(self.out_channels * self.in_channels, 3))  # (o*i, 3)
-        self.theta = nn.Parameter(torch.zeros(self.out_channels * self.in_channels))  # (o*i)
+    indices = np.zeros((k, k, k, 3))
+    for x in range(k):
+        for y in range(k):
+            for z in range(k):
+                indices[x, y, z, 0] = z * 2. / (k - 1) - 1
+                indices[x, y, z, 1] = y * 2. / (k - 1) - 1
+                indices[x, y, z, 2] = x * 2. / (k - 1) - 1
+    indices = np.stack([indices] * (o * i))
 
-        ### some constants used to calc C
-        self.const_3d_indice_xyz = self._get_3d_indice(self.kernel_size).cuda().unsqueeze(0).repeat(
-            self.out_channels * self.in_channels, 1, 1)  # (o*i, k^3, 3)
-        k = self.kernel_size
-        self.grids = Variable(self.const_3d_indice_xyz).view(-1, k * k * k, 3)
+    # base_grid = to_var(np.zeros((o * i, k, k, k, 3)))
+    #
+    # linear_points = torch.linspace(-1, 1, k)
+    # base_grid[:, :, :, 0] = torch.ger(torch.ones(k), linear_points).expand_as(base_grid[:, :, :, 0])
+    #
+    # linear_points = torch.linspace(-1, 1, k)
+    # base_grid[:, :, :, 1] = torch.ger(linear_points, torch.ones(k)).expand_as(base_grid[:, :, :, 1])
+    #
+    # base_grid[:, :, :, 2] = 1
 
-        self.theta_v.data.uniform_(0, 1)
-        self.theta.data.uniform_(0, np.pi)
+    inputs = inputs.view(-1, 1, k, k, k)
 
-    def forward(self, inputs):
-        assert inputs.size(0) == self.out_channels \
-               and inputs.size(1) == self.in_channels \
-               and inputs.size(2) == self.kernel_size
+    base_grid = to_var(indices)
+    n = theta_v.size(0)
 
-        inputs = inputs.view(-1, self.kernel_size, self.kernel_size, self.kernel_size)
+    theta_v = F.normalize(theta_v, p = 2)
+    vx = theta_v[:, 0]
+    vy = theta_v[:, 1]
+    vz = theta_v[:, 2]
 
-        filter = self._linear_interpolation(self.theta_v, self.theta, inputs)
+    m = to_var(torch.zeros(n, 3, 3))
+    m[:, 0, 1] = -vz
+    m[:, 0, 2] = vy
+    m[:, 1, 0] = vz
+    m[:, 1, 2] = -vx
+    m[:, 2, 0] = -vy
+    m[:, 2, 1] = vx
 
-        filter = filter.view(self.out_channels, self.in_channels, self.kernel_size, self.kernel_size, self.kernel_size)
-        return filter
+    I3 = to_var(torch.eye(3)).view(1, 3, 3)
+    R = I3 + torch.sin(theta).view(n, 1, 1) * m + (1 - torch.cos(theta)).view(n, 1, 1) * torch.bmm(m, m)
 
-    def _linear_interpolation(self, theta_v, theta, inputs):
-        k = self.kernel_size
+    grids = torch.bmm(base_grid.view(-1, k * k * k, 3), R)
+    grids = grids.view(-1, k, k, k, 3)
 
-        R = self._get_R_by_expm(theta_v, theta)
-
-        inputs = inputs.view(-1, 1, k, k, k)
-
-        grids = torch.bmm(self.grids.detach(), R)
-        grids = grids.view(-1, k, k, k, 3)
-        outputs = F.grid_sample(inputs, grids)
-        outputs = outputs.view(-1, k, k, k)
-        return outputs
-
-    def _get_R_by_expm(self, v, theta):
-        """
-        v: (o*i, 3)
-        theta: (o*i,)
-        return:
-            R: (o*i, 3, 3)
-        """
-        n = v.size(0)
-
-        # normalize v
-        # epsilon = 0.000000001  # used to handle 0/0
-        # v_length = torch.sqrt(torch.sum(v * v, dim = 1))
-        # vx = (v[:, 0] + epsilon) / (v_length + epsilon)
-        # vy = (v[:, 1] + epsilon) / (v_length + epsilon)
-        # vz = (v[:, 2] + epsilon) / (v_length + epsilon)
-        v = F.normalize(v, p = 2)
-        vx = v[:, 0]
-        vy = v[:, 1]
-        vz = v[:, 2]
-
-        m = Variable(torch.zeros(n, 3, 3)).cuda()
-        m[:, 0, 1] = -vz
-        m[:, 0, 2] = vy
-        m[:, 1, 0] = vz
-        m[:, 1, 2] = -vx
-        m[:, 2, 0] = -vy
-        m[:, 2, 1] = vx
-
-        I3 = Variable(torch.eye(3).view(1, 3, 3).cuda())
-        R = I3 + torch.sin(theta).view(n, 1, 1) * m + (1 - torch.cos(theta)).view(n, 1, 1) * torch.bmm(m, m)
-        return R
-
-    def _get_3d_indice(self, k):
-        indices = []
-        for x in range(k):
-            for y in range(k):
-                for z in range(k):
-                    x = x * 2. / (k - 1) - 1
-                    y = y * 2. / (k - 1) - 1
-                    z = z * 2. / (k - 1) - 1
-                    indices.append((x, y, z))
-
-        indices = torch.from_numpy(np.array(indices)).float()
-        return indices
+    outputs = F.grid_sample(inputs, grids)
+    outputs = outputs.view(o, i, k, k, k)
+    return outputs

@@ -49,7 +49,7 @@ class ConvNet3D(nn.Module):
         self.classifier = LinearPool(
             features = [self.channels[-1]] + [128] + [self.num_classes],
             batch_norm = self.batch_norm,
-            dropout = self.dropout
+            # dropout = self.dropout
         )
         self.apply(weights_init)
 
