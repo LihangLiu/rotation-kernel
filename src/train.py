@@ -4,7 +4,7 @@ import argparse
 import os
 
 import torch
-import torch.nn as nn
+from torch.nn.functional import cross_entropy
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
@@ -85,9 +85,6 @@ if __name__ == '__main__':
 
         load_snapshot(args.teacher, model = teacher)
 
-    # criterion
-    criterion = nn.CrossEntropyLoss().cuda()
-
     # optimizers
     if 'rot' in args.kernel_mode:
         param_dict = dict(model.named_parameters())
@@ -95,7 +92,7 @@ if __name__ == '__main__':
         theta_params = [param_dict[k] for k in param_dict if 'theta' in k]
         optimizers = [
             torch.optim.Adam(weight_params, lr = args.learning_rate),
-            torch.optim.Adam(theta_params)
+            torch.optim.Adam(theta_params, lr = args.learning_rate)
         ]
     else:
         optimizers = [
@@ -136,12 +133,12 @@ if __name__ == '__main__':
 
             if args.teacher is not None:
                 results = teacher.forward(inputs)
-                print(outputs.size(), results.size())
-                print(outputs[0])
-                print(results[0])
+                # print(outputs.size(), results.size())
+                # print(outputs[0])
+                # print(results[0])
 
             # loss
-            loss = criterion(outputs, targets)
+            loss = cross_entropy(outputs, targets)
 
             # logger
             logger.scalar_summary('train-loss', loss.item(), step)
