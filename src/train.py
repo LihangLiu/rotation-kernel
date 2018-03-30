@@ -39,7 +39,6 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', default = 64, type = int)
     parser.add_argument('--snapshot', default = 1, type = int)
     parser.add_argument('--learning_rate', default = 0.0001, type = float)
-    parser.add_argument('--lr_theta', default = 0.001, type = float)
 
     # arguments
     args = parser.parse_args()
@@ -96,7 +95,7 @@ if __name__ == '__main__':
         theta_params = [param_dict[k] for k in param_dict if 'theta' in k]
         optimizers = [
             torch.optim.Adam(weight_params, lr = args.learning_rate),
-            torch.optim.Adam(theta_params, lr = args.lr_theta)
+            torch.optim.Adam(theta_params)
         ]
     else:
         optimizers = [

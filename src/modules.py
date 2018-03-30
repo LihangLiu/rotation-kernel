@@ -37,11 +37,11 @@ class ConvRotate3d(nn.Module):
             nn.init.normal(self.weights_1d, std = 0.02)
 
         if 'rot' in self.kernel_mode:
-            self.theta_v = nn.Parameter(torch.zeros(self.out_channels * self.in_channels, 3))  # (o*i, 3)
-            nn.init.uniform(self.theta_v, a = 0, b = 1)
-
-            self.theta = nn.Parameter(torch.zeros(self.out_channels * self.in_channels))  # (o*i)
-            nn.init.uniform(self.theta, a = 0, b = np.pi)
+            self.rotate3d = Rotate3d(
+                in_channels = self.in_channels,
+                out_channels = self.out_channels,
+                kernel_size = self.kernel_size
+            )
 
         if self.bias:
             self.bias = nn.Parameter(torch.zeros(self.out_channels))
@@ -59,58 +59,58 @@ class ConvRotate3d(nn.Module):
             weights = torch.bmm(weights_2d, weights_1d).view(o, i, k, k, k)
 
         if 'rot' in self.kernel_mode:
-            weights = rotate(weights, self.theta_v, self.theta)
+            weights = self.rotate3d.forward(weights)
 
         outputs = F.conv3d(inputs, weights, bias = self.bias, stride = self.stride, padding = self.padding)
         return outputs
 
 
-def rotate(inputs, theta_v, theta):
-    i, o, k = inputs.size(0), inputs.size(1), inputs.size(2)
+class Rotate3d(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size):
+        super(Rotate3d, self).__init__()
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
 
-    indices = np.zeros((k, k, k, 3))
-    for x in range(k):
-        for y in range(k):
-            for z in range(k):
-                indices[x, y, z, 0] = z * 2. / (k - 1) - 1
-                indices[x, y, z, 1] = y * 2. / (k - 1) - 1
-                indices[x, y, z, 2] = x * 2. / (k - 1) - 1
-    indices = np.stack([indices] * (o * i))
+        self.theta_v = nn.Parameter(torch.zeros(self.out_channels * self.in_channels, 3))
+        nn.init.uniform(self.theta_v, a = 0, b = 1)
 
-    # base_grid = to_var(np.zeros((o * i, k, k, k, 3)))
-    #
-    # linear_points = torch.linspace(-1, 1, k)
-    # base_grid[:, :, :, 0] = torch.ger(torch.ones(k), linear_points).expand_as(base_grid[:, :, :, 0])
-    #
-    # linear_points = torch.linspace(-1, 1, k)
-    # base_grid[:, :, :, 1] = torch.ger(linear_points, torch.ones(k)).expand_as(base_grid[:, :, :, 1])
-    #
-    # base_grid[:, :, :, 2] = 1
+        self.theta = nn.Parameter(torch.zeros(self.out_channels * self.in_channels))
+        nn.init.uniform(self.theta, a = 0, b = np.pi)
 
-    inputs = inputs.view(-1, 1, k, k, k)
+        base_grids = torch.zeros(
+            self.out_channels * self.in_channels, self.kernel_size, self.kernel_size, self.kernel_size, 3
+        )
+        for k in range(self.kernel_size):
+            base_grids[:, :, :, k, 0] = k * 2. / (self.kernel_size - 1) - 1
+            base_grids[:, :, k, :, 1] = k * 2. / (self.kernel_size - 1) - 1
+            base_grids[:, k, :, :, 2] = k * 2. / (self.kernel_size - 1) - 1
+        self.base_grids = to_var(base_grids)
 
-    base_grid = to_var(indices)
-    n = theta_v.size(0)
+    def forward(self, inputs):
+        o, i, k = inputs.size(0), inputs.size(1), inputs.size(2)
 
-    theta_v = F.normalize(theta_v, p = 2)
-    vx = theta_v[:, 0]
-    vy = theta_v[:, 1]
-    vz = theta_v[:, 2]
+        inputs = inputs.view(-1, 1, k, k, k)
 
-    m = to_var(torch.zeros(n, 3, 3))
-    m[:, 0, 1] = -vz
-    m[:, 0, 2] = vy
-    m[:, 1, 0] = vz
-    m[:, 1, 2] = -vx
-    m[:, 2, 0] = -vy
-    m[:, 2, 1] = vx
+        theta_v = F.normalize(self.theta_v, p = 2)
+        vx = theta_v[:, 0]
+        vy = theta_v[:, 1]
+        vz = theta_v[:, 2]
 
-    I3 = to_var(torch.eye(3)).view(1, 3, 3)
-    R = I3 + torch.sin(theta).view(n, 1, 1) * m + (1 - torch.cos(theta)).view(n, 1, 1) * torch.bmm(m, m)
+        m = to_var(torch.zeros(o * i, 3, 3))
+        m[:, 0, 1] = -vz
+        m[:, 0, 2] = vy
+        m[:, 1, 0] = vz
+        m[:, 1, 2] = -vx
+        m[:, 2, 0] = -vy
+        m[:, 2, 1] = vx
 
-    grids = torch.bmm(base_grid.view(-1, k * k * k, 3), R)
-    grids = grids.view(-1, k, k, k, 3)
+        I3 = to_var(torch.eye(3)).view(1, 3, 3)
+        R = I3 + torch.sin(self.theta).view(-1, 1, 1) * m + (1 - torch.cos(self.theta)).view(-1, 1, 1) * torch.bmm(m, m)
 
-    outputs = F.grid_sample(inputs, grids)
-    outputs = outputs.view(o, i, k, k, k)
-    return outputs
+        grids = torch.bmm(self.base_grids.view(-1, k * k * k, 3), R)
+        grids = grids.view(-1, k, k, k, 3)
+
+        outputs = F.grid_sample(inputs, grids)
+        outputs = outputs.view(o, i, k, k, k)
+        return outputs
