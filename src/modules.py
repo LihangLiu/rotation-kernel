@@ -94,16 +94,14 @@ class Rotate3d(nn.Module):
         v = F.normalize(self.theta_v, p = 2)
         vx, vy, vz = v[:, 0], v[:, 1], v[:, 2]
 
-        m = to_var(torch.zeros(o * i, 3, 3))
-        m[:, 0, 1] = -vz
-        m[:, 0, 2] = vy
-        m[:, 1, 0] = vz
-        m[:, 1, 2] = -vx
-        m[:, 2, 0] = -vy
-        m[:, 2, 1] = vx
+        M = to_var(torch.zeros(o * i, 3, 3))
+        M[:, 2, 1], M[:, 1, 2] = vx, -vx
+        M[:, 0, 2], M[:, 2, 0] = vy, -vy
+        M[:, 1, 0], M[:, 0, 1] = vz, -vz
 
-        I = to_var(torch.eye(3)).view(1, 3, 3)
-        R = I + torch.sin(self.theta).view(-1, 1, 1) * m + (1 - torch.cos(self.theta)).view(-1, 1, 1) * torch.bmm(m, m)
+        R = to_var(torch.eye(3)).view(1, 3, 3) + \
+            torch.sin(self.theta).view(-1, 1, 1) * M + \
+            (1 - torch.cos(self.theta)).view(-1, 1, 1) * torch.bmm(M, M)
 
         grids = torch.bmm(self.base_grids.view(-1, k * k * k, 3), R)
         grids = grids.view(-1, k, k, k, 3)
