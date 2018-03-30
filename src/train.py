@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from data import ModelNet
-from networks import ConvNet3D
+from networks import ConvNet3d
 from utils import set_cuda_devices
 from utils.shell import mkdir
 from utils.torch import ClassErrorMeter, Logger, load_snapshot, save_snapshot, to_var
@@ -67,7 +67,7 @@ if __name__ == '__main__':
     print('[size] = {0} + {1} + {2}'.format(len(data['train']), len(data['valid']), len(data['test'])))
 
     # model
-    model = ConvNet3D(
+    model = ConvNet3d(
         channels = [1, 32, 64, 128, 256, 512],
         kernel_mode = args.kernel_mode,
         num_classes = 40,
@@ -77,7 +77,7 @@ if __name__ == '__main__':
     if args.teacher is not None:
         targs = load_snapshot(args.teacher, returns = 'args')
 
-        teacher = ConvNet3D(
+        teacher = ConvNet3d(
             channels = [1, 32, 64, 128, 256, 512],
             kernel_mode = targs.kernel_mode,
             num_classes = 40,

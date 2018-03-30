@@ -72,20 +72,19 @@ class Rotate3d(nn.Module):
         self.out_channels = out_channels
         self.kernel_size = kernel_size
 
+        self.base_grids = to_var(torch.zeros(
+            self.out_channels * self.in_channels, self.kernel_size, self.kernel_size, self.kernel_size, 3
+        ))
+        for k in range(self.kernel_size):
+            self.base_grids[:, :, :, k, 0] = k * 2. / (self.kernel_size - 1) - 1
+            self.base_grids[:, :, k, :, 1] = k * 2. / (self.kernel_size - 1) - 1
+            self.base_grids[:, k, :, :, 2] = k * 2. / (self.kernel_size - 1) - 1
+
         self.theta_v = nn.Parameter(torch.zeros(self.out_channels * self.in_channels, 3))
         nn.init.uniform(self.theta_v, a = 0, b = 1)
 
         self.theta = nn.Parameter(torch.zeros(self.out_channels * self.in_channels))
         nn.init.uniform(self.theta, a = 0, b = np.pi)
-
-        base_grids = torch.zeros(
-            self.out_channels * self.in_channels, self.kernel_size, self.kernel_size, self.kernel_size, 3
-        )
-        for k in range(self.kernel_size):
-            base_grids[:, :, :, k, 0] = k * 2. / (self.kernel_size - 1) - 1
-            base_grids[:, :, k, :, 1] = k * 2. / (self.kernel_size - 1) - 1
-            base_grids[:, k, :, :, 2] = k * 2. / (self.kernel_size - 1) - 1
-        self.base_grids = to_var(base_grids)
 
     def forward(self, inputs):
         o, i, k = inputs.size(0), inputs.size(1), inputs.size(2)

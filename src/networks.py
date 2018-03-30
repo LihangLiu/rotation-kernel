@@ -3,12 +3,12 @@ from __future__ import print_function
 import torch.nn as nn
 
 from modules import ConvRotate3d
-from utils.torch import weights_init, LinearPool
+from utils.torch import weights_init, LinearNet
 
 
-class ConvNet3D(nn.Module):
+class ConvNet3d(nn.Module):
     def __init__(self, channels, kernel_mode, num_classes, batch_norm = True, dropout = 0.5):
-        super(ConvNet3D, self).__init__()
+        super(ConvNet3d, self).__init__()
         self.channels = channels
         self.kernel_mode = kernel_mode
         self.num_classes = num_classes
@@ -46,7 +46,7 @@ class ConvNet3D(nn.Module):
             ))
 
         self.extractor = nn.Sequential(*layers)
-        self.classifier = LinearPool(
+        self.classifier = LinearNet(
             features = [self.channels[-1]] + [128] + [self.num_classes],
             batch_norm = self.batch_norm,
             # dropout = self.dropout
