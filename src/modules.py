@@ -20,21 +20,38 @@ class ConvRotate3d(nn.Module):
         self.bias = bias
 
         if '3d' in self.kernel_mode:
-            self.weights = nn.Parameter(torch.zeros(
-                self.out_channels, self.in_channels, self.kernel_size, self.kernel_size, self.kernel_size
-            ))
-            nn.init.normal(self.weights, std = 0.02)
+            self.kernels = [
+                nn.Parameter(torch.zeros(
+                    self.out_channels, self.in_channels, self.kernel_size, self.kernel_size, self.kernel_size
+                ))
+            ]
 
         if '2d+1d' in self.kernel_mode:
-            self.weights_2d = nn.Parameter(torch.zeros(
-                self.out_channels, self.in_channels, self.kernel_size, self.kernel_size
-            ))
-            nn.init.normal(self.weights_2d, std = 0.02)
+            self.kernels = [
+                nn.Parameter(torch.zeros(
+                    self.out_channels, self.in_channels, self.kernel_size, self.kernel_size
+                )),
+                nn.Parameter(torch.zeros(
+                    self.out_channels, self.in_channels, self.kernel_size
+                ))
+            ]
 
-            self.weights_1d = nn.Parameter(torch.zeros(
-                self.out_channels, self.in_channels, self.kernel_size
-            ))
-            nn.init.normal(self.weights_1d, std = 0.02)
+        if '1d+1d+1d' in self.kernel_mode:
+            self.kernels = [
+                nn.Parameter(torch.zeros(
+                    self.out_channels, self.in_channels, self.kernel_size
+                )),
+                nn.Parameter(torch.zeros(
+                    self.out_channels, self.in_channels, self.kernel_size
+                )),
+                nn.Parameter(torch.zeros(
+                    self.out_channels, self.in_channels, self.kernel_size
+                ))
+            ]
+
+        for k, kernel in enumerate(self.kernels):
+            nn.init.normal(kernel, std = 0.02)
+            self.register_parameter('kernel-{0}'.format(k + 1), kernel)
 
         if 'rot' in self.kernel_mode:
             self.rotate3d = Rotate3d(
@@ -49,19 +66,20 @@ class ConvRotate3d(nn.Module):
             self.bias = None
 
     def forward(self, inputs):
-        if '3d' in self.kernel_mode:
-            weights = self.weights
+        i, o, k = self.in_channels, self.out_channels, self.kernel_size
 
-        if '2d+1d' in self.kernel_mode:
-            i, o, k = self.in_channels, self.out_channels, self.kernel_size
-            weights_2d = self.weights_2d.view(o * i, k * k, 1)
-            weights_1d = self.weights_1d.view(o * i, 1, k)
-            weights = torch.bmm(weights_2d, weights_1d).view(o, i, k, k, k)
+        kernels = to_var(torch.ones(o * i))
+        for kernel in self.kernels:
+            kernels = torch.bmm(
+                kernels.view(o * i, -1, 1),
+                kernel.view(o * i, 1, -1)
+            )
+        kernels = kernels.view(o, i, k, k, k)
 
         if 'rot' in self.kernel_mode:
-            weights = self.rotate3d.forward(weights)
+            kernels = self.rotate3d.forward(kernels)
 
-        outputs = F.conv3d(inputs, weights, bias = self.bias, stride = self.stride, padding = self.padding)
+        outputs = F.conv3d(inputs, kernels, bias = self.bias, stride = self.stride, padding = self.padding)
         return outputs
 
 
