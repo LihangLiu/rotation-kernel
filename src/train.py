@@ -30,7 +30,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch', default = 64, type = int)
 
     # network
-    parser.add_argument('--kernel_mode', default = None, choices = ['3d', '2d+1d', '1d+1d+1d', '3d+rot', '2d+1d+rot'])
+    parser.add_argument('--kernel_mode', choices = ['3d', '2d+1d', '1d+1d+1d', '3d+rot', '2d+1d+rot', '1d+1d+1d+rot'])
 
     # distillation
     parser.add_argument('--teacher', default = None)
