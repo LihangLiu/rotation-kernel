@@ -5,8 +5,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from modules import ConvRotate3d, transform3d_grid, transform3d
-from utils.torch import DensePool, to_var, weights_init
+from modules import ConvRotate3d, transform3d
+from utils.torch import DensePool, to_var, weights_init, transform_grid
 
 
 
@@ -59,7 +59,7 @@ class Transformer3d(nn.Module):
         outputs = self.classifier.forward(features)
 
         theta = transform3d(outputs)
-        grids = transform3d_grid(theta, inputs.size())
+        grids = transform_grid(theta, inputs.size())
         outputs = F.grid_sample(inputs, grids)
         return outputs
 

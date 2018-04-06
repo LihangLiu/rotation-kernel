@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from utils.torch import to_var
+from utils.torch import to_var, transform_grid
 
 
 def transform3d(theta):
@@ -24,22 +24,7 @@ def transform3d(theta):
     return theta
 
 
-def transform3d_grid(transform, size):
-    n, c, d, h, w = size
 
-    grids = to_var(torch.zeros(d, h, w, 3))
-    for k in range(w):
-        grids[:, :, k, 0] = k * 2. / (w - 1) - 1
-    for k in range(h):
-        grids[:, k, :, 1] = k * 2. / (h - 1) - 1
-    for k in range(d):
-        grids[k, :, :, 2] = k * 2. / (d - 1) - 1
-
-    grids = torch.stack([grids.view(-1, 3)] * n, 0)
-    grids = torch.bmm(grids, transform)
-    grids = grids.view(n, d, h, w, 3)
-
-    return grids
 
 
 class ConvRotate3d(nn.Module):
@@ -114,7 +99,7 @@ class ConvRotate3d(nn.Module):
             theta = torch.cat([self.theta_n, self.theta_r.unsqueeze(-1)], -1)
 
             transform = transform3d(theta)
-            grids = transform3d_grid(transform, (i * o, 1, k, k, k))
+            grids = transform_grid(transform, (i * o, 1, k, k, k))
 
             kernels = kernels.view(-1, 1, k, k, k)
             kernels = F.grid_sample(kernels, grids)
