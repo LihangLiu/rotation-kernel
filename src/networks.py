@@ -132,8 +132,8 @@ class Transformer3d(nn.Module):
         self.apply(weights_init)
 
     def forward(self, inputs):
-        features = self.estimator.forward(inputs).view(inputs.size(0), -1)
-        theta = self.classifier.forward(features)
+        features = self.extractor.forward(inputs).view(inputs.size(0), -1)
+        theta = self.estimator.forward(features)
 
         grids = rotate_grid(theta_n = theta[:, :3], theta_r = theta[:, -1], size = inputs.size())
         outputs = F.grid_sample(inputs, grids)
@@ -195,7 +195,9 @@ class ConvNet3d(nn.Module):
         self.apply(weights_init)
 
     def forward(self, inputs):
+        # todo
         inputs = self.transformer.forward(inputs)
+
         features = self.extractor.forward(inputs).view(inputs.size(0), -1)
         outputs = self.classifier.forward(features)
         return outputs
