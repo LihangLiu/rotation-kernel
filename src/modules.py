@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import numpy as np
 import torch
 import torch.nn as nn
@@ -90,13 +88,11 @@ class Rotate3d(nn.Module):
         self.out_channels = out_channels
         self.kernel_size = kernel_size
 
-        self.base_grids = to_var(torch.zeros(
-            self.out_channels * self.in_channels, self.kernel_size, self.kernel_size, self.kernel_size, 3
-        ))
+        self.base_grids = to_var(torch.zeros(self.kernel_size, self.kernel_size, self.kernel_size, 3))
         for k in range(self.kernel_size):
-            self.base_grids[:, :, :, k, 0] = k * 2. / (self.kernel_size - 1) - 1
-            self.base_grids[:, :, k, :, 1] = k * 2. / (self.kernel_size - 1) - 1
-            self.base_grids[:, k, :, :, 2] = k * 2. / (self.kernel_size - 1) - 1
+            self.base_grids[:, :, k, 0] = k * 2. / (self.kernel_size - 1) - 1
+            self.base_grids[:, k, :, 1] = k * 2. / (self.kernel_size - 1) - 1
+            self.base_grids[k, :, :, 2] = k * 2. / (self.kernel_size - 1) - 1
 
         self.theta_n = nn.Parameter(torch.zeros(self.out_channels * self.in_channels, 3))
         nn.init.uniform(self.theta_n, a = 0, b = 1)
@@ -120,7 +116,8 @@ class Rotate3d(nn.Module):
 
         inputs = inputs.view(-1, 1, k, k, k)
 
-        grids = self.base_grids.view(-1, k * k * k, 3)
+        grids = torch.stack([self.base_grids] * (self.out_channels * self.in_channels))
+        grids = grids.view(-1, k * k * k, 3)
         grids = torch.bmm(grids, theta)
         grids = grids.view(-1, k, k, k, 3)
 
