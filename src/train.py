@@ -71,7 +71,7 @@ if __name__ == '__main__':
     model = ConvNet3d(
         channels = [1, 32, 64, 128, 256, 512],
         kernel_mode = args.kernel_mode,
-        num_classes = 40,
+        features = [128, 40]
     ).cuda()
 
     # teacher
@@ -81,13 +81,14 @@ if __name__ == '__main__':
         teacher = ConvNet3d(
             channels = [1, 32, 64, 128, 256, 512],
             kernel_mode = targs.kernel_mode,
-            num_classes = 40,
+            features = [128, 40]
         ).cuda()
 
         load_snapshot(args.teacher, model = teacher)
 
     # optimizers
     if 'rot' in args.kernel_mode:
+        # fixme
         param_dict = dict(model.named_parameters())
         weight_params = [param_dict[k] for k in param_dict if 'theta' not in k]
         theta_params = [param_dict[k] for k in param_dict if 'theta' in k]
@@ -102,6 +103,7 @@ if __name__ == '__main__':
 
     # load snapshot
     if args.resume is not None:
+        # fixme
         epoch = load_snapshot(args.resume, model = model, returns = 'epoch')
         print('==> snapshot "{0}" loaded'.format(args.resume))
     else:
@@ -132,11 +134,9 @@ if __name__ == '__main__':
             optimizer.zero_grad()
             outputs = model.forward(inputs)
 
+            # todo
             if args.teacher is not None:
                 results = teacher.forward(inputs)
-                # print(outputs.size(), results.size())
-                # print(outputs[0])
-                # print(results[0])
 
             # loss
             loss = cross_entropy(outputs, targets)
