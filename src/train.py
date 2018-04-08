@@ -37,10 +37,10 @@ if __name__ == '__main__':
     # training
     parser.add_argument('--epochs', default = 64, type = int)
     parser.add_argument('--snapshot', default = 1, type = int)
-    parser.add_argument('--learning_rate', default = 1e-3, type = float)
+    parser.add_argument('--learning_rate', default = 1e-4, type = float)
     parser.add_argument('--weight_decay', default = 1e-4, type = float)
     parser.add_argument('--step_size', default = 8, type = int)
-    parser.add_argument('--gamma', default = 1e-1, type = float)
+    parser.add_argument('--gamma', default = 5e-1, type = float)
 
     # arguments
     args = parser.parse_args()
@@ -79,7 +79,7 @@ if __name__ == '__main__':
 
     # optimizers
     if 'rot' in args.kernel_mode:
-        # fixme
+        # fixme: clean up
         param_dict = dict(model.named_parameters())
         weight_params = [param_dict[k] for k in param_dict if 'theta' not in k]
         theta_params = [param_dict[k] for k in param_dict if 'theta' in k]
@@ -94,7 +94,7 @@ if __name__ == '__main__':
 
     # load snapshot
     if args.resume is not None:
-        # fixme
+        # fixme: load optimizer
         epoch = load_snapshot(args.resume, model = model, returns = 'epoch')
         print('==> snapshot "{0}" loaded'.format(args.resume))
     else:
@@ -110,11 +110,11 @@ if __name__ == '__main__':
     # scheduler
     schedulers = []
     for optimizer in optimizers:
+        # fixme: last epoch
         schedulers.append(torch.optim.lr_scheduler.StepLR(
             optimizer = optimizer,
             step_size = args.step_size,
             gamma = args.gamma,
-            last_epoch = epoch - 1
         ))
 
     # iterations
@@ -123,8 +123,7 @@ if __name__ == '__main__':
         print('==> epoch {0} (starting from step {1})'.format(epoch + 1, step + 1))
 
         # scheduler
-        for scheduler in schedulers:
-            scheduler.step()
+        schedulers[epoch % len(schedulers)].step()
 
         # optimizer
         optimizer = optimizers[epoch % len(optimizers)]
