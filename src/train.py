@@ -34,14 +34,13 @@ if __name__ == '__main__':
     parser.add_argument('--input_rotate', action = 'store_true')
     parser.add_argument('--kernel_rotate', action = 'store_true')
 
-    # distillation
-    parser.add_argument('--teacher', default = None)
-
     # training
     parser.add_argument('--epochs', default = 64, type = int)
     parser.add_argument('--snapshot', default = 1, type = int)
-    parser.add_argument('--learning_rate', default = 1e-4, type = float)
+    parser.add_argument('--learning_rate', default = 1e-3, type = float)
     parser.add_argument('--weight_decay', default = 1e-4, type = float)
+    parser.add_argument('--step_size', default = 8, type = int)
+    parser.add_argument('--gamma', default = 1e-1, type = float)
 
     # arguments
     args = parser.parse_args()
@@ -78,20 +77,6 @@ if __name__ == '__main__':
         kernel_rotate = args.kernel_rotate
     ).cuda()
 
-    # teacher
-    if args.teacher is not None:
-        targs = load_snapshot(args.teacher, returns = 'args')
-
-        teacher = ConvNet3d(
-            channels = [1, 32, 64, 128, 256, 512],
-            features = [128, 40],
-            kernel_mode = targs.kernel_mode,
-            input_rotate = targs.input_rotate,
-            kernel_rotate = targs.kernel_rotate
-        ).cuda()
-
-        load_snapshot(args.teacher, model = teacher)
-
     # optimizers
     if 'rot' in args.kernel_mode:
         # fixme
@@ -122,10 +107,24 @@ if __name__ == '__main__':
     # logger
     logger = Logger(save_path)
 
+    # scheduler
+    schedulers = []
+    for optimizer in optimizers:
+        schedulers.append(torch.optim.lr_scheduler.StepLR(
+            optimizer = optimizer,
+            step_size = args.step_size,
+            gamma = args.gamma,
+            last_epoch = epoch - 1
+        ))
+
     # iterations
     for epoch in range(epoch, args.epochs):
         step = epoch * len(data['train'])
         print('==> epoch {0} (starting from step {1})'.format(epoch + 1, step + 1))
+
+        # scheduler
+        for scheduler in schedulers:
+            scheduler.step()
 
         # optimizer
         optimizer = optimizers[epoch % len(optimizers)]
@@ -139,10 +138,6 @@ if __name__ == '__main__':
             # forward
             optimizer.zero_grad()
             outputs = model.forward(inputs)
-
-            # todo
-            if args.teacher is not None:
-                results = teacher.forward(inputs)
 
             # loss
             loss = cross_entropy(outputs, targets)
