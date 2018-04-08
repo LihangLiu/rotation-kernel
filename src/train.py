@@ -30,7 +30,9 @@ if __name__ == '__main__':
     parser.add_argument('--batch', default = 64, type = int)
 
     # network
-    parser.add_argument('--kernel_mode', choices = ['3d', '2d+1d', '1d+1d+1d', '3d+rot', '2d+1d+rot', '1d+1d+1d+rot'])
+    parser.add_argument('--kernel_mode', choices = ['3d', '2d+1d', '1d+1d+1d'])
+    parser.add_argument('--input_rotate', action = 'store_true')
+    parser.add_argument('--kernel_rotate', action = 'store_true')
 
     # distillation
     parser.add_argument('--teacher', default = None)
@@ -70,8 +72,10 @@ if __name__ == '__main__':
     # model
     model = ConvNet3d(
         channels = [1, 32, 64, 128, 256, 512],
+        features = [128, 40],
         kernel_mode = args.kernel_mode,
-        features = [128, 40]
+        input_rotate = args.input_rotate,
+        kernel_rotate = args.kernel_rotate
     ).cuda()
 
     # teacher
@@ -80,8 +84,10 @@ if __name__ == '__main__':
 
         teacher = ConvNet3d(
             channels = [1, 32, 64, 128, 256, 512],
+            features = [128, 40],
             kernel_mode = targs.kernel_mode,
-            features = [128, 40]
+            input_rotate = targs.input_rotate,
+            kernel_rotate = targs.kernel_rotate
         ).cuda()
 
         load_snapshot(args.teacher, model = teacher)

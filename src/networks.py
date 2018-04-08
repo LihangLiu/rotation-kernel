@@ -7,24 +7,26 @@ from utils.torch import DensePool, rotate_grid, to_var, weights_init
 
 
 class ConvRotate3d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, kernel_mode, stride = 1, padding = 0, bias = True):
+    def __init__(self, in_channels, out_channels, kernel_size, kernel_mode = '3d', kernel_rotate = True,
+                 stride = 1, padding = 0, bias = True):
         super(ConvRotate3d, self).__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.kernel_size = kernel_size
         self.kernel_mode = kernel_mode
+        self.kernel_rotate = kernel_rotate
         self.stride = stride
         self.padding = padding
         self.bias = bias
 
-        if '3d' in self.kernel_mode:
+        if self.kernel_mode == '3d':
             self.kernels = [
                 nn.Parameter(torch.zeros(
                     self.out_channels, self.in_channels, self.kernel_size, self.kernel_size, self.kernel_size
                 ))
             ]
 
-        if '2d+1d' in self.kernel_mode:
+        if self.kernel_mode == '2d+1d':
             self.kernels = [
                 nn.Parameter(torch.zeros(
                     self.out_channels, self.in_channels, self.kernel_size, self.kernel_size
@@ -34,7 +36,7 @@ class ConvRotate3d(nn.Module):
                 ))
             ]
 
-        if '1d+1d+1d' in self.kernel_mode:
+        if self.kernel_mode == '1d+1d+1d':
             self.kernels = [
                 nn.Parameter(torch.zeros(
                     self.out_channels, self.in_channels, self.kernel_size
@@ -51,7 +53,7 @@ class ConvRotate3d(nn.Module):
             nn.init.normal(kernel, std = 0.02)
             self.register_parameter('kernel-{0}'.format(k + 1), kernel)
 
-        if 'rot' in self.kernel_mode:
+        if self.kernel_rotate:
             self.theta_n = nn.Parameter(torch.zeros(self.out_channels * self.in_channels, 3))
             nn.init.uniform(self.theta_n, a = 0, b = 1)
 
@@ -74,8 +76,8 @@ class ConvRotate3d(nn.Module):
             )
         kernels = kernels.view(o, i, k, k, k)
 
-        if 'rot' in self.kernel_mode:
-            grids = rotate_grid(theta_n = self.theta_n, theta_r = self.theta_r, size = (i * o, 1, k, k, k))
+        if self.kernel_rotate:
+            grids = rotate_grid(theta_n = self.theta_n, theta_r = self.theta_r, size = (o * i, 1, k, k, k))
 
             kernels = kernels.view(o * i, 1, k, k, k)
             kernels = F.grid_sample(kernels, grids)
@@ -141,19 +143,22 @@ class Transformer3d(nn.Module):
 
 
 class ConvNet3d(nn.Module):
-    def __init__(self, channels, kernel_mode, features, batch_norm = True, dropout = 0.5):
+    def __init__(self, channels, features, kernel_mode, input_rotate, kernel_rotate, batch_norm = True, dropout = 0.5):
         super(ConvNet3d, self).__init__()
         self.channels = channels
-        self.kernel_mode = kernel_mode
         self.features = features
+        self.kernel_mode = kernel_mode
+        self.input_rotate = input_rotate
+        self.kernel_rotate = kernel_rotate
         self.batch_norm = batch_norm
         self.dropout = dropout
 
-        self.transformer = Transformer3d(
-            channels = self.channels,
-            batch_norm = self.batch_norm,
-            dropout = self.dropout
-        )
+        if self.input_rotate:
+            self.transformer = Transformer3d(
+                channels = self.channels,
+                batch_norm = self.batch_norm,
+                dropout = self.dropout
+            )
 
         layers = []
         for k in range(len(self.channels) - 1):
@@ -165,6 +170,7 @@ class ConvNet3d(nn.Module):
                 out_channels = out_channels,
                 kernel_size = 4,
                 kernel_mode = self.kernel_mode,
+                kernel_rotate = self.kernel_rotate,
                 stride = 1,
                 padding = 1,
                 bias = False
@@ -195,8 +201,8 @@ class ConvNet3d(nn.Module):
         self.apply(weights_init)
 
     def forward(self, inputs):
-        # todo
-        inputs = self.transformer.forward(inputs)
+        if self.input_rotate:
+            inputs = self.transformer.forward(inputs)
 
         features = self.extractor.forward(inputs).view(inputs.size(0), -1)
         outputs = self.classifier.forward(features)
