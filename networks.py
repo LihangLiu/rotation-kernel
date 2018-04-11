@@ -49,9 +49,17 @@ class ConvRotate3d(nn.Module):
                 ))
             ]
 
-        for k, kernel in enumerate(self.kernels):
+        for kernel in self.kernels:
             nn.init.normal(kernel, std = 0.02)
+
+        self.masks = []
+        for kernel in self.kernels:
+            mask = nn.Parameter(torch.ones(kernel.size()))
+            self.masks.append(mask)
+
+        for k, (kernel, mask) in enumerate(zip(self.kernels, self.masks)):
             self.register_parameter('kernel-{0}'.format(k + 1), kernel)
+            self.register_parameter('mask-{0}'.format(k + 1), mask)
 
         if self.kernel_rotate:
             self.theta_n = nn.Parameter(torch.zeros(self.out_channels * self.in_channels, 3))
@@ -69,10 +77,10 @@ class ConvRotate3d(nn.Module):
         i, o, k = self.in_channels, self.out_channels, self.kernel_size
 
         kernels = to_var(torch.ones(o * i))
-        for kernel in self.kernels:
+        for kernel, mask in zip(self.kernels, self.masks):
             kernels = torch.bmm(
                 kernels.view(o * i, -1, 1),
-                kernel.view(o * i, 1, -1)
+                (kernel * mask.detach()).view(o * i, 1, -1)
             )
         kernels = kernels.view(o, i, k, k, k)
 
@@ -85,6 +93,9 @@ class ConvRotate3d(nn.Module):
 
         outputs = F.conv3d(inputs, kernels, bias = self.bias, stride = self.stride, padding = self.padding)
         return outputs
+
+    def prune(self):
+        pass
 
 
 # fixme
