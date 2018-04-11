@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from utils.torch import DensePool, rotate_grid, to_var, weights_init
+from utilx.torch import DensePool, rotate_grid, to_var, weights_init
 
 
 class ConvRotate3d(nn.Module):
