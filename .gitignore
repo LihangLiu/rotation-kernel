@@ -1,0 +1,5 @@
+outputs/*
+exp/*
+**/__pycache__
+**/*.pyc
+data/ModelNet_list/3DShapeNets
