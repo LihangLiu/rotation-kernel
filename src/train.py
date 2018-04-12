@@ -11,7 +11,7 @@ from tqdm import tqdm
 from data import ModelNet
 from networks import ConvNet3d
 from utilx.shell import mkdir, set_cuda_devices
-from utilx.torch import ClassErrorMeter, Logger, as_variable, load_snapshot, save_snapshot
+from utilx.torch import ClassErrorMeter, Logger, as_variable, load_snapshot, mark_volatile, save_snapshot
 
 if __name__ == '__main__':
     # argument parser
@@ -130,8 +130,8 @@ if __name__ == '__main__':
         # training
         model.train()
         for inputs, targets in tqdm(loaders['train'], desc = 'train'):
-            inputs = as_variable(inputs)
-            targets = as_variable(targets, type = 'long')
+            inputs = as_variable(inputs).float()
+            targets = as_variable(targets).long()
 
             # forward
             optimizer.zero_grad()
@@ -156,8 +156,8 @@ if __name__ == '__main__':
             meter = ClassErrorMeter()
 
             for inputs, targets in tqdm(loaders[split], desc = split):
-                inputs = as_variable(inputs, volatile = True)
-                targets = as_variable(targets, type = 'long', volatile = True)
+                inputs = mark_volatile(inputs).float()
+                targets = mark_volatile(targets).long()
 
                 # forward
                 outputs = model.forward(inputs)
