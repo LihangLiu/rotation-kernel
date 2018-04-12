@@ -159,7 +159,7 @@ class Transformer3d(nn.Module):
 
         self.extractor = nn.Sequential(*layers)
 
-        self.estimator = DensePool(
+        self.estimator = LinearLayers(
             features = [self.channels[-1], 128, 4],
             batch_norm = self.batch_norm,
             dropout = self.dropout
@@ -226,7 +226,7 @@ class ConvNet3d(nn.Module):
 
         self.extractor = nn.Sequential(*layers)
 
-        self.classifier = DensePool(
+        self.classifier = LinearLayers(
             features = [self.channels[-1]] + self.features,
             batch_norm = self.batch_norm,
             dropout = self.dropout
