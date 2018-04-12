@@ -10,9 +10,9 @@ from tqdm import tqdm
 
 from data import ModelNet
 from networks import ConvNet3d
-from utils import set_cuda_devices
-from utils.shell import mkdir
-from utils.torch import ClassErrorMeter, Logger, load_snapshot, save_snapshot, to_var
+from utilx import set_cuda_devices
+from utilx import mkdir
+from utilx.torch import ClassErrorMeter, Logger, load_snapshot, save_snapshot, as_variable
 
 if __name__ == '__main__':
     # argument parser
@@ -117,6 +117,47 @@ if __name__ == '__main__':
             gamma = args.gamma,
         ))
 
+    model.eval()
+
+    accuracy = {}
+    for split in ['test']:
+        meter = ClassErrorMeter()
+
+        for inputs, targets in tqdm(loaders[split], desc = split):
+            inputs = as_variable(inputs, volatile = True)
+            targets = as_variable(targets, type = 'long', volatile = True)
+
+            # forward
+            outputs = model.forward(inputs)
+            meter.add(outputs, targets)
+
+        accuracy[split] = meter.value()
+
+    print('test-accuracy = {0}'.format(accuracy['test']))
+
+    def prune(m):
+        if not hasattr(m, 'prune'):
+            return
+        m.prune()
+
+    model.apply(prune)
+
+    accuracy = {}
+    for split in ['test']:
+        meter = ClassErrorMeter()
+
+        for inputs, targets in tqdm(loaders[split], desc = split):
+            inputs = as_variable(inputs, volatile = True)
+            targets = as_variable(targets, type = 'long', volatile = True)
+
+            # forward
+            outputs = model.forward(inputs)
+            meter.add(outputs, targets)
+
+        accuracy[split] = meter.value()
+
+    print('test-accuracy = {0}'.format(accuracy['test']))
+
     # iterations
     for epoch in range(epoch, args.epochs):
         step = epoch * len(data['train'])
@@ -131,8 +172,8 @@ if __name__ == '__main__':
         # training
         model.train()
         for inputs, targets in tqdm(loaders['train'], desc = 'train'):
-            inputs = to_var(inputs)
-            targets = to_var(targets, type = 'long')
+            inputs = as_variable(inputs)
+            targets = as_variable(targets, type = 'long')
 
             # forward
             optimizer.zero_grad()
@@ -149,16 +190,15 @@ if __name__ == '__main__':
             loss.backward()
             optimizer.step()
 
-        # testing
         model.eval()
 
         accuracy = {}
-        for split in ['train', 'valid', 'test']:
+        for split in ['test']:
             meter = ClassErrorMeter()
 
             for inputs, targets in tqdm(loaders[split], desc = split):
-                inputs = to_var(inputs, volatile = True)
-                targets = to_var(targets, type = 'long', volatile = True)
+                inputs = as_variable(inputs, volatile = True)
+                targets = as_variable(targets, type = 'long', volatile = True)
 
                 # forward
                 outputs = model.forward(inputs)
@@ -166,27 +206,46 @@ if __name__ == '__main__':
 
             accuracy[split] = meter.value()
 
-        # logger
-        if (epoch + 1) % len(optimizers) == 0:
-            for split in ['train', 'valid', 'test']:
-                logger.scalar_summary('{0}-accuracy'.format(split), accuracy[split], step)
-
-        # snapshot
-        save_snapshot(
-            path = os.path.join(save_path, 'latest.pth'),
-            model = model,
-            optimizer = optimizer,
-            accuracy = accuracy,
-            epoch = epoch + 1,
-            args = args
-        )
-
-        if args.snapshot != 0 and (epoch + 1) % args.snapshot == 0:
-            save_snapshot(
-                path = os.path.join(save_path, 'epoch-{0}.pth'.format(epoch + 1)),
-                model = model,
-                optimizer = optimizer,
-                accuracy = accuracy,
-                epoch = epoch + 1,
-                args = args
-            )
+        print('test-accuracy = {0}'.format(accuracy['test']))
+    #
+    #     # testing
+    #     model.eval()
+    #
+    #     accuracy = {}
+    #     for split in ['train', 'valid', 'test']:
+    #         meter = ClassErrorMeter()
+    #
+    #         for inputs, targets in tqdm(loaders[split], desc = split):
+    #             inputs = to_var(inputs, volatile = True)
+    #             targets = to_var(targets, type = 'long', volatile = True)
+    #
+    #             # forward
+    #             outputs = model.forward(inputs)
+    #             meter.add(outputs, targets)
+    #
+    #         accuracy[split] = meter.value()
+    #
+    #     # logger
+    #     if (epoch + 1) % len(optimizers) == 0:
+    #         for split in ['train', 'valid', 'test']:
+    #             logger.scalar_summary('{0}-accuracy'.format(split), accuracy[split], step)
+    #
+    #     # snapshot
+    #     save_snapshot(
+    #         path = os.path.join(save_path, 'latest.pth'),
+    #         model = model,
+    #         optimizer = optimizer,
+    #         accuracy = accuracy,
+    #         epoch = epoch + 1,
+    #         args = args
+    #     )
+    #
+    #     if args.snapshot != 0 and (epoch + 1) % args.snapshot == 0:
+    #         save_snapshot(
+    #             path = os.path.join(save_path, 'epoch-{0}.pth'.format(epoch + 1)),
+    #             model = model,
+    #             optimizer = optimizer,
+    #             accuracy = accuracy,
+    #             epoch = epoch + 1,
+    #             args = args
+    #         )

@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from utilx.torch import DensePool, rotate_grid, to_var, weights_init
+from utilx import *
 
 
 class ConvRotate3d(nn.Module):
@@ -76,7 +76,7 @@ class ConvRotate3d(nn.Module):
     def forward(self, inputs):
         i, o, k = self.in_channels, self.out_channels, self.kernel_size
 
-        kernels = to_var(torch.ones(o * i))
+        kernels = as_variable(torch.ones(o * i))
         for kernel, mask in zip(self.kernels, self.masks):
             kernels = torch.bmm(
                 kernels.view(o * i, -1, 1),
@@ -95,7 +95,15 @@ class ConvRotate3d(nn.Module):
         return outputs
 
     def prune(self):
-        pass
+        for k, (kernel, mask) in enumerate(zip(self.kernels, self.masks)):
+            kernel = np.abs(as_numpy(kernel))
+            values = np.sort(kernel.reshape(-1))
+            threshold = values[len(values) // 2]
+            print(threshold)
+
+            new_mask = (kernel >= threshold).astype(float)
+            print(np.sum(new_mask), np.prod(new_mask.shape))
+            self.masks[k].data = torch.from_numpy(new_mask).float().cuda()
 
 
 # fixme
