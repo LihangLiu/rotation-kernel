@@ -1,7 +1,6 @@
 from __future__ import print_function
 
 import argparse
-import os
 
 import torch
 from torch.nn.functional import cross_entropy
@@ -10,9 +9,7 @@ from tqdm import tqdm
 
 from data import ModelNet
 from networks import ConvNet3d
-from utilx import set_cuda_devices
-from utilx import mkdir
-from utilx.torch import ClassErrorMeter, Logger, load_snapshot, save_snapshot, as_variable
+from utilx import *
 
 if __name__ == '__main__':
     # argument parser
@@ -135,10 +132,12 @@ if __name__ == '__main__':
 
     print('test-accuracy = {0}'.format(accuracy['test']))
 
+
     def prune(m):
         if not hasattr(m, 'prune'):
             return
         m.prune()
+
 
     model.apply(prune)
 
