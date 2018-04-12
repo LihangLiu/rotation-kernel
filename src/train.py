@@ -10,7 +10,8 @@ from tqdm import tqdm
 
 from data import ModelNet
 from networks import ConvNet3d
-from utilx import *
+from utilx.shell import mkdir, set_cuda_devices
+from utilx.torch import ClassErrorMeter, Logger, as_variable, load_snapshot, save_snapshot
 
 if __name__ == '__main__':
     # argument parser
@@ -68,8 +69,7 @@ if __name__ == '__main__':
 
     # model
     model = ConvNet3d(
-        # channels = [1, 32, 64, 128, 256, 512],
-        channels = [1, 4, 4, 4, 4, 4],
+        channels = [1, 32, 64, 128, 256, 512],
         features = [128, 40],
         kernel_mode = args.kernel_mode,
         input_rotate = args.input_rotate,

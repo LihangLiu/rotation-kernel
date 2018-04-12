@@ -3,7 +3,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from utilx.torchx import LinearLayers, as_numpy, as_variable, rotate_grid, weights_init
+from utilx.torch import as_numpy, as_variable
+from utilx.torch.nn import LinearLayers, weights_init
+from utilx.torch.nn.functional import rotate_grid
 
 
 class ConvRotate3d(nn.Module):
@@ -91,8 +93,8 @@ class ConvRotate3d(nn.Module):
             kernels = F.grid_sample(kernels, grids)
             kernels = kernels.view(o, i, k, k, k)
 
-        kernels = kernels.view(o * i, k * k, k)
-
+        # kernels = kernels.view(o * i, k * k, k)
+        #
         # kk = []
         # for iiii in range(o * i):
         #     u, s, v = torch.svd(kernels[iiii])
