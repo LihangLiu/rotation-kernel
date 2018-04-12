@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from utilx import *
+from utilx.torchx import LinearLayers, as_numpy, as_variable, rotate_grid, weights_init
 
 
 class ConvRotate3d(nn.Module):
@@ -93,17 +93,17 @@ class ConvRotate3d(nn.Module):
 
         kernels = kernels.view(o * i, k * k, k)
 
-        kk = []
-        for iiii in range(o * i):
-            u, s, v = torch.svd(kernels[iiii])
-            v = v.t().contiguous()
-            u = u[:, 0].contiguous()
-            s = s[0].contiguous()
-            v = v[0, :].contiguous()
-            r = s * torch.ger(u, v)
-            kk.append(r)
-        kk = torch.stack(kk, dim = 0)
-        kernels = kk.view(o, i, k, k, k)
+        # kk = []
+        # for iiii in range(o * i):
+        #     u, s, v = torch.svd(kernels[iiii])
+        #     v = v.t().contiguous()
+        #     u = u[:, 0].contiguous()
+        #     s = s[0].contiguous()
+        #     v = v[0, :].contiguous()
+        #     r = s * torch.ger(u, v)
+        #     kk.append(r)
+        # kk = torch.stack(kk, dim = 0)
+        # kernels = kk.view(o, i, k, k, k)
 
         outputs = F.conv3d(inputs, kernels, bias = self.bias, stride = self.stride, padding = self.padding)
         return outputs
