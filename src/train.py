@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from data import ModelNet
 from networks import ConvNet3d
-from utilx.shell import mkdir, set_cuda_devices
+from utilx.core.shell import mkdir, set_cuda_devices
 from utilx.torch import ClassErrorMeter, Logger, as_variable, load_snapshot, mark_volatile, save_snapshot
 
 if __name__ == '__main__':
