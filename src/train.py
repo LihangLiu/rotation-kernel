@@ -101,7 +101,7 @@ if __name__ == '__main__':
 
     # save path
     save_path = os.path.join('..', 'exp', args.exp)
-    mkdir(save_path, clean = False)
+    mkdir(save_path, clean = args.resume is None)
 
     # logger
     logger = Logger(save_path)
