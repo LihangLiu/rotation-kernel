@@ -5,7 +5,7 @@ import torch.nn.functional as F
 
 from utilx.torch import as_numpy, as_variable
 from utilx.torch.functional import rotate_grid
-from utilx.torch.nn import LinearLayers, weights_init, Conv3dLayers
+from utilx.torch.nn import LinearLayers, init_weights
 
 
 class ConvRotate3d(nn.Module):
@@ -163,10 +163,10 @@ class Transformer3d(nn.Module):
 
         self.estimator = LinearLayers(
             features = [self.channels[-1], 128, 4],
-            batchnorm = self.batch_norm,
-            dropout = self.dropout
+            normalization = 'batch',
+            dropout = True
         )
-        self.apply(weights_init)
+        self.apply(init_weights())
 
     def forward(self, inputs):
         features = self.extractor.forward(inputs).view(inputs.size(0), -1)
@@ -230,10 +230,10 @@ class ConvNet3d(nn.Module):
 
         self.classifier = LinearLayers(
             features = [self.channels[-1]] + self.features,
-            batchnorm = self.batch_norm,
-            dropout = self.dropout
+            normalization = 'batch',
+            dropout = True
         )
-        self.apply(weights_init)
+        self.apply(init_weights())
 
     def forward(self, inputs):
         if self.input_rotate:
