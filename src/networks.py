@@ -163,7 +163,7 @@ class Transformer3d(nn.Module):
 
         self.estimator = LinearLayers(
             features = [self.channels[-1], 128, 4],
-            batch_norm = self.batch_norm,
+            batchnorm = self.batch_norm,
             dropout = self.dropout
         )
         self.apply(weights_init)
@@ -230,7 +230,7 @@ class ConvNet3d(nn.Module):
 
         self.classifier = LinearLayers(
             features = [self.channels[-1]] + self.features,
-            batch_norm = self.batch_norm,
+            batchnorm = self.batch_norm,
             dropout = self.dropout
         )
         self.apply(weights_init)
