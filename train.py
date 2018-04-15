@@ -11,9 +11,9 @@ from tqdm import tqdm
 from data import ModelNet
 from networks import ConvNet3d
 from utilx import *
-from utilx.torch import *
-from utilx.torch.io.logger import Logger
-from utilx.torch.io.snapshot import load_snapshot, save_snapshot
+from learnx.torch import *
+from learnx.torch.io.logger import Logger
+from learnx.torch.io.snapshot import load_snapshot, save_snapshot
 
 if __name__ == '__main__':
     # argument parser

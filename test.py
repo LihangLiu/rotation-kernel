@@ -4,7 +4,7 @@ import argparse
 import os
 
 from utilx import *
-from utilx.torch import *
+from learnx.torch.io.snapshot import load_snapshot
 
 if __name__ == '__main__':
     # argument parser

@@ -3,9 +3,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from utilx.torch import *
-from utilx.torch.functional import *
-from utilx.torch.nn import *
+from learnx.torch import *
+from learnx.torch.functional import *
+from learnx.torch.nn import *
 
 
 class ConvRotate3d(nn.Module):
