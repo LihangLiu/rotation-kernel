@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import argparse
+import os
 
 import torch
 from torch.nn.functional import cross_entropy
@@ -11,6 +12,8 @@ from data import ModelNet
 from networks import ConvNet3d
 from utilx import *
 from utilx.torch import *
+from utilx.torch.io.logger import Logger
+from utilx.torch.io.snapshot import load_snapshot, save_snapshot
 
 if __name__ == '__main__':
     # argument parser
@@ -126,24 +129,19 @@ if __name__ == '__main__':
         # optimizer
         optimizer = optimizers[epoch % len(optimizers)]
 
-        # training
         model.train()
         for inputs, targets in tqdm(loaders['train'], desc = 'train'):
             inputs = as_variable(inputs).float()
             targets = as_variable(targets).long()
 
-            # forward
             optimizer.zero_grad()
             outputs = model.forward(inputs)
 
-            # loss
             loss = cross_entropy(outputs, targets)
 
-            # logger
             logger.scalar_summary('train-loss', loss.item(), step)
             step += targets.size(0)
 
-            # backward
             loss.backward()
             optimizer.step()
 

@@ -1,3 +1,7 @@
 [submodule "utilx"]
 	path = utilx
 	url = https://github.com/zhijian-liu/utilx.git
+
+[submodule "learnx"]
+	path = learnx
+	url = https://github.com/zhijian-liu/learnx.git
