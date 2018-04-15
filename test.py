@@ -20,7 +20,7 @@ if __name__ == '__main__':
         print('[{0}] = {1}'.format(key, getattr(args, key)))
 
     # save path
-    save_path = os.path.join('..', 'exp', args.exp)
+    save_path = os.path.join( 'exp', args.exp)
 
     # test accuracy
     valid, test = 0, 0

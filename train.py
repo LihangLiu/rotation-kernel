@@ -23,7 +23,7 @@ if __name__ == '__main__':
     parser.add_argument('--gpu', default = '0')
 
     # dataset
-    parser.add_argument('--data_path', default = '../data/')
+    parser.add_argument('--data_path', default = './data/')
     parser.add_argument('--voxel_size', default = 32, type = int)
     parser.add_argument('--workers', default = 8, type = int)
     parser.add_argument('--batch', default = 64, type = int)
@@ -100,7 +100,7 @@ if __name__ == '__main__':
         epoch = 0
 
     # save path
-    save_path = os.path.join('..', 'exp', args.exp)
+    save_path = os.path.join('exp', args.exp)
     mkdir(save_path, clean = args.resume is None)
 
     # logger

@@ -1,3 +1,3 @@
 [submodule "utilx"]
-	path = src/utilx
+	path = utilx
 	url = https://github.com/zhijian-liu/utilx.git
