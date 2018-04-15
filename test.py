@@ -24,7 +24,7 @@ if __name__ == '__main__':
 
     # test accuracy
     valid, test = 0, 0
-    for snapshot_path in ls(save_path, exts = '.pth'):
+    for snapshot_path in ls(save_path, suffix = '.pth'):
         path = os.path.join(save_path, snapshot_path)
         accuracy = load_snapshot(path, returns = 'accuracy')
 
