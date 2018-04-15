@@ -1,7 +1,6 @@
 from __future__ import print_function
 
 import argparse
-import os
 
 import torch
 from torch.nn.functional import cross_entropy
@@ -10,8 +9,8 @@ from tqdm import tqdm
 
 from data import ModelNet
 from networks import ConvNet3d
-from utilx.core import mkdir, set_cuda_devices
-from utilx.torch import ClassErrorMeter, Logger, as_variable, load_snapshot, mark_volatile, save_snapshot
+from utilx import *
+from utilx.torch import *
 
 if __name__ == '__main__':
     # argument parser

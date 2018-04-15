@@ -3,8 +3,8 @@ from __future__ import print_function
 import argparse
 import os
 
-from utilx.core import ls
-from utilx.torch import load_snapshot
+from utilx import *
+from utilx.torch import *
 
 if __name__ == '__main__':
     # argument parser

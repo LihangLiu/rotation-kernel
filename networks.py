@@ -3,9 +3,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from utilx.torch import as_numpy, as_variable
-from utilx.torch.functional import rotate_grid
-from utilx.torch.nn import LinearLayers, init_weights, get_normalization
+from utilx.torch import *
+from utilx.torch.functional import *
+from utilx.torch.nn import *
 
 
 class ConvRotate3d(nn.Module):
