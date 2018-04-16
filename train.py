@@ -8,12 +8,12 @@ from torch.nn.functional import cross_entropy
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from data import ModelNet
 from learnx.torch import *
 from learnx.torch.io import *
 from learnx.torch.meters import *
-from networks import ConvNet3d
 from utilx.cli import *
+from .data import ModelNet
+from .models import ConvNet3d
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
