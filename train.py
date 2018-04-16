@@ -11,30 +11,26 @@ from tqdm import tqdm
 from data import ModelNet
 from learnx.torch import *
 from learnx.torch.io import *
+from learnx.torch.meters import *
 from networks import ConvNet3d
 from utilx.cli import *
 
 if __name__ == '__main__':
-    # argument parser
     parser = argparse.ArgumentParser()
 
-    # experiment
     parser.add_argument('--exp', default = 'default')
     parser.add_argument('--resume', default = None)
     parser.add_argument('--gpu', default = '0')
 
-    # dataset
     parser.add_argument('--data_path', default = './data/')
     parser.add_argument('--voxel_size', default = 32, type = int)
     parser.add_argument('--workers', default = 8, type = int)
     parser.add_argument('--batch', default = 64, type = int)
 
-    # network
     parser.add_argument('--kernel_mode', choices = ['3d', '2d+1d', '1d+1d+1d'])
     parser.add_argument('--input_rotate', action = 'store_true')
     parser.add_argument('--kernel_rotate', action = 'store_true')
 
-    # training
     parser.add_argument('--epochs', default = 64, type = int)
     parser.add_argument('--snapshot', default = 1, type = int)
     parser.add_argument('--learning_rate', default = 1e-4, type = float)
@@ -42,7 +38,6 @@ if __name__ == '__main__':
     parser.add_argument('--step_size', default = 8, type = int)
     parser.add_argument('--gamma', default = 4e-1, type = float)
 
-    # arguments
     args = parser.parse_args()
     print('==> arguments parsed')
     for key in vars(args):
@@ -50,7 +45,6 @@ if __name__ == '__main__':
 
     set_cuda_visible_devices(args.gpu)
 
-    # datasets & loaders
     data, loaders = {}, {}
     for split in ['train', 'valid', 'test']:
         data[split] = ModelNet(
@@ -67,7 +61,6 @@ if __name__ == '__main__':
     print('==> dataset loaded')
     print('[size] = {0} + {1} + {2}'.format(len(data['train']), len(data['valid']), len(data['test'])))
 
-    # model
     model = ConvNet3d(
         channels = [1, 32, 64, 128, 256, 512],
         features = [128, 40],
@@ -76,7 +69,6 @@ if __name__ == '__main__':
         kernel_rotate = args.kernel_rotate
     ).cuda()
 
-    # optimizers
     if 'rot' in args.kernel_mode:
         # fixme: clean up
         param_dict = dict(model.named_parameters())
@@ -91,7 +83,6 @@ if __name__ == '__main__':
             torch.optim.Adam(model.parameters(), lr = args.learning_rate, weight_decay = args.weight_decay)
         ]
 
-    # load snapshot
     if args.resume is not None:
         # fixme: load optimizer
         epoch = load_snapshot(args.resume, model = model, returns = 'epoch')
@@ -99,14 +90,11 @@ if __name__ == '__main__':
     else:
         epoch = 0
 
-    # save path
     save_path = os.path.join('exp', args.exp)
     mkdir(save_path, clean = args.resume is None)
 
-    # logger
     logger = Logger(save_path)
 
-    # scheduler
     schedulers = []
     for optimizer in optimizers:
         # fixme: last epoch
@@ -116,15 +104,11 @@ if __name__ == '__main__':
             gamma = args.gamma,
         ))
 
-    # iterations
     for epoch in range(epoch, args.epochs):
         step = epoch * len(data['train'])
         print('==> epoch {0} (starting from step {1})'.format(epoch + 1, step + 1))
 
-        # scheduler
         schedulers[epoch % len(schedulers)].step()
-
-        # optimizer
         optimizer = optimizers[epoch % len(optimizers)]
 
         model.train()
@@ -143,7 +127,6 @@ if __name__ == '__main__':
             loss.backward()
             optimizer.step()
 
-        # testing
         model.eval()
 
         accuracy = {}
@@ -154,18 +137,15 @@ if __name__ == '__main__':
                 inputs = mark_volatile(inputs).float()
                 targets = mark_volatile(targets).long()
 
-                # forward
                 outputs = model.forward(inputs)
                 meter.add(outputs, targets)
 
             accuracy[split] = meter.value()
 
-        # logger
         if (epoch + 1) % len(optimizers) == 0:
             for split in ['train', 'valid', 'test']:
                 logger.scalar_summary('{0}-accuracy'.format(split), accuracy[split], step)
 
-        # snapshot
         save_snapshot(
             path = os.path.join(save_path, 'latest.pth'),
             model = model,
