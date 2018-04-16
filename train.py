@@ -10,8 +10,7 @@ from tqdm import tqdm
 
 from data import ModelNet
 from learnx.torch import *
-from learnx.torch.io.logger import Logger
-from learnx.torch.io.snapshot import load_snapshot, save_snapshot
+from learnx.torch.io import *
 from networks import ConvNet3d
 from utilx.cli import *
 
