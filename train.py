@@ -9,11 +9,11 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from data import ModelNet
-from networks import ConvNet3d
-from utilx import *
 from learnx.torch import *
 from learnx.torch.io.logger import Logger
 from learnx.torch.io.snapshot import load_snapshot, save_snapshot
+from networks import ConvNet3d
+from utilx.cli import *
 
 if __name__ == '__main__':
     # argument parser
@@ -49,8 +49,7 @@ if __name__ == '__main__':
     for key in vars(args):
         print('[{0}] = {1}'.format(key, getattr(args, key)))
 
-    # cuda devices
-    set_cuda_devices(args.gpu)
+    set_cuda_visible_devices(args.gpu)
 
     # datasets & loaders
     data, loaders = {}, {}

@@ -3,7 +3,7 @@ from __future__ import print_function
 import argparse
 import os
 
-from utilx import *
+from utilx.cli import *
 from learnx.torch.io.snapshot import load_snapshot
 
 if __name__ == '__main__':
