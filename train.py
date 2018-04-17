@@ -69,6 +69,8 @@ if __name__ == '__main__':
         kernel_rotate = args.kernel_rotate
     ).cuda()
 
+    # model = torch.nn.DataParallel(model, device_ids = [0, 1, 2, 3])
+
     if 'rot' in args.kernel_mode:
         # fixme: clean up
         param_dict = dict(model.named_parameters())
