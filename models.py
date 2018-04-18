@@ -21,37 +21,24 @@ class ConvRotate3d(nn.Module):
         self.padding = padding
         self.bias = bias
 
-        self.kernels = nn.ParameterList()
         if self.kernel_mode == '3d':
-            self.kernels.append(nn.Parameter(torch.zeros(
-                self.out_channels, self.in_channels, self.kernel_size, self.kernel_size, self.kernel_size
-            )))
+            dimensions = [3]
         elif self.kernel_mode == '2d+1d':
-            self.kernels.append(nn.Parameter(torch.zeros(
-                self.out_channels, self.in_channels, self.kernel_size, self.kernel_size
-            )))
-            self.kernels.append(nn.Parameter(torch.zeros(
-                self.out_channels, self.in_channels, self.kernel_size
-            )))
+            dimensions = [2, 1]
         elif self.kernel_mode == '1d+1d+1d':
-            self.kernels.append(nn.Parameter(torch.zeros(
-                self.out_channels, self.in_channels, self.kernel_size
-            )))
-            self.kernels.append(nn.Parameter(torch.zeros(
-                self.out_channels, self.in_channels, self.kernel_size
-            )))
-            self.kernels.append(nn.Parameter(torch.zeros(
-                self.out_channels, self.in_channels, self.kernel_size
-            )))
+            dimensions = [1, 1, 1]
         else:
             raise NotImplementedError('unsupported kernel mode: {0}'.format(self.kernel_mode))
 
-        for kernel in self.kernels:
-            nn.init.normal(kernel, std = 0.02)
+        self.kernels, self.masks = nn.ParameterList(), nn.ParameterList()
+        for d in dimensions:
+            size = (self.out_channels, self.in_channels) + (self.kernel_size,) * d
+            self.kernels.append(nn.Parameter(torch.zeros(*size)))
+            self.masks.append(nn.Parameter(torch.zeros(*size)))
 
-        self.masks = nn.ParameterList()
-        for kernel in self.kernels:
-            self.masks.append(nn.Parameter(torch.ones(kernel.size())))
+        for kernel, mask in zip(self.kernels, self.masks):
+            nn.init.normal(kernel, std = 0.02)
+            nn.init.constant(mask, val = 1)
 
         if self.kernel_rotate:
             self.theta_n = nn.Parameter(torch.zeros(self.out_channels * self.in_channels, 3))
