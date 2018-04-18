@@ -28,7 +28,6 @@ if __name__ == '__main__':
     parser.add_argument('--batch', default = 64, type = int)
 
     parser.add_argument('--kernel_mode', choices = ['3d', '2d+1d', '1d+1d+1d'])
-    parser.add_argument('--input_rotate', action = 'store_true')
     parser.add_argument('--kernel_rotate', action = 'store_true')
 
     parser.add_argument('--epochs', default = 64, type = int)
@@ -65,7 +64,6 @@ if __name__ == '__main__':
         channels = [1, 32, 64, 128, 256, 512],
         features = [128, 40],
         kernel_mode = args.kernel_mode,
-        input_rotate = args.input_rotate,
         kernel_rotate = args.kernel_rotate
     )
 

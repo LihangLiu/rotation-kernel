@@ -4,8 +4,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from learnx.torch import *
-from learnx.torch.functional import *
 from learnx.torch.nn import *
+from learnx.torch.nn.functional import *
 
 
 class ConvRotate3d(nn.Module):
@@ -98,65 +98,9 @@ class ConvRotate3d(nn.Module):
             self.masks[k].data = torch.from_numpy(new_mask).float().cuda()
 
 
-# fixme
-class Transformer3d(nn.Module):
-    def __init__(self, channels, normalization = 'batch'):
-        super(Transformer3d, self).__init__()
-
-        layers = []
-        for k in range(len(channels) - 1):
-            in_channels = channels[k]
-            out_channels = channels[k + 1]
-
-            layers.append(nn.Conv3d(
-                in_channels = in_channels,
-                out_channels = out_channels,
-                kernel_size = 4,
-                stride = 1,
-                padding = 1,
-                bias = False
-            ))
-
-            if normalization is not None and normalization is not False:
-                layers.append(get_normalization(layer_type = normalization, num_dims = 3)(out_channels))
-
-            layers.append(nn.LeakyReLU(
-                negative_slope = 0.2,
-                inplace = True
-            ))
-            layers.append(nn.MaxPool3d(
-                kernel_size = 3,
-                stride = 2,
-                padding = 1
-            ))
-
-        self.extractor = nn.Sequential(*layers)
-
-        self.estimator = LinearLayers(
-            features = [channels[-1], 128, 4],
-            normalization = normalization,
-        )
-
-    def forward(self, inputs):
-        features = self.extractor.forward(inputs).view(inputs.size(0), -1)
-        theta = self.estimator.forward(features)
-
-        grids = rotate_grid(theta_n = theta[:, :3], theta_r = theta[:, -1], size = inputs.size())
-        outputs = F.grid_sample(inputs, grids)
-        return outputs
-
-
 class ConvNet3d(nn.Module):
-    def __init__(self, channels, features, kernel_mode, input_rotate, kernel_rotate, normalization = 'batch'):
+    def __init__(self, channels, features, kernel_mode, kernel_rotate, normalization = 'batch'):
         super(ConvNet3d, self).__init__()
-
-        if input_rotate:
-            self.transformer = Transformer3d(
-                channels = channels,
-                normalization = normalization
-            )
-        else:
-            self.transformer = None
 
         layers = []
         for k in range(len(channels) - 1):
@@ -196,9 +140,6 @@ class ConvNet3d(nn.Module):
         self.apply(init_weights())
 
     def forward(self, inputs):
-        if self.transformer is not None:
-            inputs = self.transformer.forward(inputs)
-
         features = self.extractor.forward(inputs).view(inputs.size(0), -1)
         outputs = self.classifier.forward(features)
         return outputs
