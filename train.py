@@ -8,11 +8,11 @@ from torch.nn.functional import cross_entropy
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from data import ModelNet
+from data import *
 from learnx.torch import *
 from learnx.torch.io import *
 from learnx.torch.meters import *
-from models import ConvNet3d
+from models import *
 from utilx.cli import *
 
 if __name__ == '__main__':
@@ -42,7 +42,7 @@ if __name__ == '__main__':
     for key in vars(args):
         print('[{0}] = {1}'.format(key, getattr(args, key)))
 
-    set_cuda_visible_devices(args.gpu)
+    args.gpu = set_cuda_visible_devices(args.gpu)
 
     data, loaders = {}, {}
     for split in ['train', 'valid', 'test']:
@@ -60,14 +60,12 @@ if __name__ == '__main__':
     print('==> dataset loaded')
     print('[size] = {0} + {1} + {2}'.format(len(data['train']), len(data['valid']), len(data['test'])))
 
-    model = ConvNet3d(
+    model = ConvRotateNet3d(
         channels = [1, 32, 64, 128, 256, 512],
-        features = [128, 40],
+        features = [512, 128, 40],
         kernel_mode = args.kernel_mode,
         kernel_rotate = args.kernel_rotate
     )
-
-    model = torch.nn.DataParallel(model).cuda()
 
     if 'rot' in args.kernel_mode:
         # fixme: clean up
@@ -89,6 +87,11 @@ if __name__ == '__main__':
         print('==> snapshot "{0}" loaded'.format(args.resume))
     else:
         epoch = 0
+
+    if len(args.gpu) > 1:
+        model = torch.nn.DataParallel(model).cuda()
+    else:
+        model = model.cuda()
 
     save_path = os.path.join('exp', args.exp)
     mkdir(save_path, clean = args.resume is None)
