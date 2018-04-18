@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional
+from torch.nn.functional import conv3d, grid_sample
 
 from learnx.torch import *
 from learnx.torch.nn import *
@@ -11,8 +11,7 @@ __all__ = ['ConvRotateNet3d']
 
 
 class ConvRotate3d(nn.Module):
-    def __init__(self, in_channels, out_channels,
-                 kernel_size, kernel_mode = None, kernel_rotate = True,
+    def __init__(self, in_channels, out_channels, kernel_size, kernel_mode = None, kernel_rotate = True,
                  stride = 1, padding = 0, bias = True):
         super(ConvRotate3d, self).__init__()
         self.in_channels = in_channels
@@ -24,18 +23,18 @@ class ConvRotate3d(nn.Module):
         self.padding = padding
         self.bias = bias
 
-        if self.kernel_mode == '3d':
-            dims = [3]
-        elif self.kernel_mode == '2d+1d':
-            dims = [2, 1]
-        elif self.kernel_mode == '1d+1d+1d':
-            dims = [1, 1, 1]
+        if kernel_mode == '3d':
+            dimensions = [3]
+        elif kernel_mode == '2d+1d':
+            dimensions = [2, 1]
+        elif kernel_mode == '1d+1d+1d':
+            dimensions = [1, 1, 1]
         else:
             raise NotImplementedError('unsupported kernel mode: {0}'.format(kernel_mode))
 
         self.kernels, self.masks = nn.ParameterList(), nn.ParameterList()
-        for dim in dims:
-            size = (out_channels, in_channels) + (kernel_size,) * dim
+        for dimension in dimensions:
+            size = (out_channels, in_channels) + (kernel_size,) * dimension
             self.kernels.append(nn.Parameter(torch.zeros(*size)))
             self.masks.append(nn.Parameter(torch.zeros(*size)))
 
@@ -65,10 +64,11 @@ class ConvRotate3d(nn.Module):
         if self.kernel_rotate:
             kernels = kernels.view(o * i, 1, k, k, k)
             grids = rotate_grid(self.theta_n, self.theta_r, size = (o * i, 1, k, k, k))
-            kernels = nn.functional.grid_sample(kernels, grids)
+            kernels = grid_sample(kernels, grids)
 
         kernels = kernels.view(o, i, k, k, k)
-        return nn.functional.conv3d(inputs, kernels, bias = self.bias, stride = self.stride, padding = self.padding)
+        outputs = conv3d(inputs, kernels, bias = self.bias, stride = self.stride, padding = self.padding)
+        return outputs
 
     # def prune(self):
     #     for k, (kernel, mask) in enumerate(zip(self.kernels, self.masks)):
