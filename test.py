@@ -19,7 +19,7 @@ if __name__ == '__main__':
     save_path = os.path.join('exp', args.exp)
 
     valid, test = 0, 0
-    for snapshot_path in ls(save_path, suffix = '.pth'):
+    for snapshot_path in ls(save_path, contains = '.pth'):
         path = os.path.join(save_path, snapshot_path)
         accuracy = load_snapshot(path, returns = 'accuracy')
 
