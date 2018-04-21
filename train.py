@@ -8,12 +8,11 @@ from torch.nn.functional import cross_entropy
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from data import *
-from learnx.torch import *
-from learnx.torch.io import *
-from learnx.torch.meters import *
-from models import *
-from utilx.cli import *
+import learnx.torch as tx
+from data import ModelNet
+from learnx.torch import as_variable, mark_volatile
+from models import ConvRotateNet3d
+from utilx import *
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -83,7 +82,7 @@ if __name__ == '__main__':
 
     if args.resume is not None:
         # fixme: load optimizer
-        epoch = load_snapshot(args.resume, model = model, returns = 'epoch')
+        epoch = tx.load_snapshot(args.resume, model = model, returns = 'epoch')
         print('==> snapshot "{0}" loaded'.format(args.resume))
     else:
         epoch = 0
@@ -96,7 +95,7 @@ if __name__ == '__main__':
     save_path = os.path.join('exp', args.exp)
     mkdir(save_path, clean = args.resume is None)
 
-    logger = Logger(save_path)
+    logger = tx.Logger(save_path)
 
     schedulers = []
     for optimizer in optimizers:
@@ -134,7 +133,7 @@ if __name__ == '__main__':
 
         accuracy = {}
         for split in ['train', 'valid', 'test']:
-            meter = ClassErrorMeter()
+            meter = tx.meters.ClassErrorMeter()
 
             for inputs, targets in tqdm(loaders[split], desc = split):
                 inputs = mark_volatile(inputs).float()
@@ -149,7 +148,7 @@ if __name__ == '__main__':
             for split in ['train', 'valid', 'test']:
                 logger.scalar_summary('{0}-accuracy'.format(split), accuracy[split], step)
 
-        save_snapshot(
+        tx.save_snapshot(
             path = os.path.join(save_path, 'latest.pth'),
             model = model,
             optimizer = optimizer,
@@ -159,7 +158,7 @@ if __name__ == '__main__':
         )
 
         if args.snapshot != 0 and (epoch + 1) % args.snapshot == 0:
-            save_snapshot(
+            tx.save_snapshot(
                 path = os.path.join(save_path, 'epoch-{0}.pth'.format(epoch + 1)),
                 model = model,
                 optimizer = optimizer,

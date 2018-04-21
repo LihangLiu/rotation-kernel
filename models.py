@@ -1,18 +1,17 @@
+import functools
+
 import numpy as np
 import torch
 import torch.nn as nn
 from torch.nn.functional import conv3d, grid_sample
 
-from learnx.torch import *
-from learnx.torch.nn import *
-from learnx.torch.nn.functional import *
-
-__all__ = ['ConvRotateNet3d']
+import learnx.torch as tx
+from learnx.torch import as_variable
 
 
 class ConvRotate3d(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, kernel_mode = None, kernel_rotate = True,
-                 stride = 1, padding = 0, bias = True):
+                 stride = 1, padding = 0, dilation = 1, groups = 1, bias = True):
         super(ConvRotate3d, self).__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -63,7 +62,7 @@ class ConvRotate3d(nn.Module):
 
         if self.kernel_rotate:
             kernels = kernels.view(o * i, 1, k, k, k)
-            grids = rotate_grid(self.theta_n, self.theta_r, size = (o * i, 1, k, k, k))
+            grids = tx.rotate_grid(self.theta_n, self.theta_r, size = (o * i, 1, k, k, k))
             kernels = grid_sample(kernels, grids)
 
         kernels = kernels.view(o, i, k, k, k)
@@ -86,33 +85,30 @@ class ConvRotateNet3d(nn.Module):
     def __init__(self, channels, features, kernel_mode, kernel_rotate):
         super(ConvRotateNet3d, self).__init__()
 
-        num_layers = len(channels) - 1
+        backend = functools.partial(
+            ConvRotate3d,
+            kernel_mode = kernel_mode,
+            kernel_rotate = kernel_rotate
+        )
 
-        modules = []
-        for k in range(num_layers):
-            in_channels = channels[k]
-            out_channels = channels[k + 1]
+        self.extractor = tx.layers.Conv3d(
+            channels = channels,
+            kernel_sizes = 5,
+            strides = 2,
+            backend = backend,
+            normalization = nn.BatchNorm3d,
+            activation = nn.LeakyReLU,
+            subsampling = nn.AvgPool3d,
+            last_activation = True
+        )
 
-            modules.append(ConvRotate3d(
-                in_channels = in_channels,
-                out_channels = out_channels,
-                kernel_size = 5,
-                kernel_mode = kernel_mode,
-                kernel_rotate = kernel_rotate,
-                padding = 2,
-                bias = False
-            ))
+        self.classifier = tx.layers.Linear(
+            features = features,
+            normalization = nn.BatchNorm1d,
+            activation = nn.LeakyReLU
+        )
 
-            modules.extend([
-                get_normalization('batch', out_channels, 3),
-                get_nonlinear('lrelu'),
-                get_subsampling('maxpool', 2, 3)
-            ])
-
-        self.extractor = nn.Sequential(*modules)
-        self.classifier = LinearLayers(features = features)
-
-        self.apply(init_weights())
+        tx.init_weights(self)
 
     def forward(self, inputs):
         features = self.extractor.forward(inputs).view(inputs.size(0), -1)

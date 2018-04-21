@@ -3,8 +3,6 @@ import os
 import numpy as np
 from torch.utils.data import Dataset
 
-__all__ = ['ModelNet']
-
 
 class ModelNet(Dataset):
     def __init__(self, data_path, split, voxel_size):
@@ -23,7 +21,6 @@ class ModelNet(Dataset):
     def __getitem__(self, index):
         model_path, target = self.data[index]
         data = np.load(model_path).astype(int)
-
         input = np.zeros((1, self.voxel_size, self.voxel_size, self.voxel_size))
         input[0, data[:, 0], data[:, 1], data[:, 2]] = 1
         return input, target
