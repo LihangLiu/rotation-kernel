@@ -135,8 +135,8 @@ if __name__ == '__main__':
             meter = tx.meters.ClassErrorMeter()
 
             for inputs, targets in tqdm(loaders[split], desc = split):
-                inputs = tx.mark_volatile(inputs).float()
-                targets = tx.mark_volatile(targets).long()
+                inputs = tx.as_volatile(inputs).float()
+                targets = tx.as_volatile(targets).long()
 
                 outputs = model.forward(inputs)
                 meter.add(outputs, targets)
