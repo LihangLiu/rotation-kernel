@@ -10,7 +10,6 @@ from tqdm import tqdm
 
 import learnx.torch as tx
 from data import ModelNet
-from learnx.torch import as_variable, mark_volatile
 from models import ConvRotateNet3d
 from utilx import *
 
@@ -115,8 +114,8 @@ if __name__ == '__main__':
 
         model.train()
         for inputs, targets in tqdm(loaders['train'], desc = 'train'):
-            inputs = as_variable(inputs).float()
-            targets = as_variable(targets).long()
+            inputs = tx.as_variable(inputs).float()
+            targets = tx.as_variable(targets).long()
 
             optimizer.zero_grad()
             outputs = model.forward(inputs)
@@ -136,8 +135,8 @@ if __name__ == '__main__':
             meter = tx.meters.ClassErrorMeter()
 
             for inputs, targets in tqdm(loaders[split], desc = split):
-                inputs = mark_volatile(inputs).float()
-                targets = mark_volatile(targets).long()
+                inputs = tx.mark_volatile(inputs).float()
+                targets = tx.mark_volatile(targets).long()
 
                 outputs = model.forward(inputs)
                 meter.add(outputs, targets)

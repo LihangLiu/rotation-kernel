@@ -6,7 +6,6 @@ import torch.nn as nn
 from torch.nn.functional import conv3d, grid_sample
 
 import learnx.torch as tx
-from learnx.torch import as_variable
 
 
 class ConvRotate3d(nn.Module):
@@ -20,6 +19,8 @@ class ConvRotate3d(nn.Module):
         self.kernel_rotate = kernel_rotate
         self.stride = stride
         self.padding = padding
+        self.dilation = dilation
+        self.groups = groups
         self.bias = bias
 
         if kernel_mode == '3d':
@@ -56,17 +57,29 @@ class ConvRotate3d(nn.Module):
     def forward(self, inputs):
         i, o, k = self.in_channels, self.out_channels, self.kernel_size
 
-        kernels = as_variable(torch.ones(o * i))
+        kernels = tx.as_variable(torch.ones(o * i))
         for kernel, mask in zip(self.kernels, self.masks):
             kernels = torch.bmm(kernels.view(o * i, -1, 1), (kernel * mask.detach()).view(o * i, 1, -1))
 
         if self.kernel_rotate:
-            kernels = kernels.view(o * i, 1, k, k, k)
-            grids = tx.rotate_grid(self.theta_n, self.theta_r, size = (o * i, 1, k, k, k))
-            kernels = grid_sample(kernels, grids)
+            kernels = grid_sample(
+                input = kernels.view(o * i, 1, k, k, k),
+                grid = tx.rotate_grid(
+                    theta_n = self.theta_n,
+                    theta_r = self.theta_r,
+                    size = (o * i, 1, k, k, k)
+                )
+            )
 
-        kernels = kernels.view(o, i, k, k, k)
-        outputs = conv3d(inputs, kernels, bias = self.bias, stride = self.stride, padding = self.padding)
+        outputs = conv3d(
+            input = inputs,
+            weight = kernels.view(o, i, k, k, k),
+            bias = self.bias,
+            stride = self.stride,
+            padding = self.padding,
+            dilation = self.dilation,
+            groups = self.groups
+        )
         return outputs
 
     # def prune(self):
@@ -104,6 +117,7 @@ class ConvRotateNet3d(nn.Module):
 
         self.classifier = tx.layers.Linear(
             features = features,
+            bias = True,
             normalization = nn.BatchNorm1d,
             activation = nn.LeakyReLU
         )
