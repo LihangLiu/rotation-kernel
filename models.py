@@ -9,7 +9,7 @@ import learnx.torch as tx
 
 
 class ConvRotate3d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, kernel_mode = None, kernel_rotate = None,
+    def __init__(self, in_channels, out_channels, kernel_size, kernel_mode = '3d', kernel_rotate = True,
                  stride = 1, padding = 0, dilation = 1, groups = 1, bias = True):
         super(ConvRotate3d, self).__init__()
         self.in_channels = in_channels
@@ -49,41 +49,34 @@ class ConvRotate3d(nn.Module):
             nn.init.uniform(self.theta_n, a = 0, b = 1)
             nn.init.uniform(self.theta_r, a = 0, b = np.pi)
 
-        if self.bias:
+        if self.bias is True:
             self.bias = nn.Parameter(torch.zeros(out_channels))
         else:
             self.bias = None
 
     def forward(self, inputs):
         i, o, k = self.in_channels, self.out_channels, self.kernel_size
-        weights = tx.as_variable(torch.ones(o * i))
 
+        weights = tx.as_variable(torch.ones(o * i))
         for weight, mask in zip(self.weights, self.masks):
-            weights = torch.bmm(
-                batch1 = weights.view(o * i, -1, 1),
-                batch2 = (weight * mask.detach()).view(o * i, 1, -1)
-            )
+            weight = weight * mask.detach()
+            weights = torch.bmm(weights.view(o * i, -1, 1), weight.view(o * i, 1, -1))
 
         if self.kernel_rotate:
-            weights = grid_sample(
-                input = weights.view(o * i, 1, k, k, k),
-                grid = tx.rotate_grid(
-                    theta_n = self.theta_n,
-                    theta_r = self.theta_r,
-                    size = (o * i, 1, k, k, k)
-                )
-            )
+            grids = tx.rotate_grid(self.theta_n, self.theta_r, size = (o * i, 1, k, k, k))
+            weights = grid_sample(weights.view(o * i, 1, k, k, k), grids)
 
-        outputs = conv3d(
+        weights = weights.view(o, i, k, k, k)
+
+        return conv3d(
             input = inputs,
-            weight = weights.view(o, i, k, k, k),
+            weight = weights,
             bias = self.bias,
             stride = self.stride,
             padding = self.padding,
             dilation = self.dilation,
             groups = self.groups
         )
-        return outputs
 
     # def prune(self):
     #     for k, (kernel, mask) in enumerate(zip(self.kernels, self.masks)):
@@ -120,7 +113,7 @@ class ConvRotateNet3d(nn.Module):
 
         self.classifier = tx.layers.Linear(
             features = features,
-            # bias = True,
+            bias = True,
             normalization = nn.BatchNorm1d,
             activation = nn.ReLU
         )

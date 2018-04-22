@@ -65,6 +65,8 @@ if __name__ == '__main__':
         kernel_rotate = args.kernel_rotate
     )
 
+    print(model)
+
     if args.kernel_rotate:
         # fixme: clean up
         param_dict = dict(model.named_parameters())
