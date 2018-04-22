@@ -9,7 +9,7 @@ import learnx.torch as tx
 
 
 class ConvRotate3d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, kernel_mode = None, kernel_rotate = True,
+    def __init__(self, in_channels, out_channels, kernel_size, kernel_mode = None, kernel_rotate = None,
                  stride = 1, padding = 0, dilation = 1, groups = 1, bias = True):
         super(ConvRotate3d, self).__init__()
         self.in_channels = in_channels
@@ -32,17 +32,17 @@ class ConvRotate3d(nn.Module):
         else:
             raise NotImplementedError('unsupported kernel mode: {0}'.format(kernel_mode))
 
-        self.kernels, self.masks = nn.ParameterList(), nn.ParameterList()
+        self.weights, self.masks = nn.ParameterList(), nn.ParameterList()
         for dimension in dimensions:
             size = (out_channels, in_channels) + (kernel_size,) * dimension
-            self.kernels.append(nn.Parameter(torch.zeros(*size)))
+            self.weights.append(nn.Parameter(torch.zeros(*size)))
             self.masks.append(nn.Parameter(torch.zeros(*size)))
 
-        for kernel, mask in zip(self.kernels, self.masks):
-            nn.init.normal(kernel, std = 0.02)
+        for weight, mask in zip(self.weights, self.masks):
+            nn.init.normal(weight, mean = 0, std = 0.02)
             nn.init.constant(mask, val = 1)
 
-        if self.kernel_rotate:
+        if kernel_rotate is True:
             self.theta_n = nn.Parameter(torch.zeros(out_channels * in_channels, 3))
             self.theta_r = nn.Parameter(torch.zeros(out_channels * in_channels))
 
@@ -56,14 +56,17 @@ class ConvRotate3d(nn.Module):
 
     def forward(self, inputs):
         i, o, k = self.in_channels, self.out_channels, self.kernel_size
+        weights = tx.as_variable(torch.ones(o * i))
 
-        kernels = tx.as_variable(torch.ones(o * i))
-        for kernel, mask in zip(self.kernels, self.masks):
-            kernels = torch.bmm(kernels.view(o * i, -1, 1), (kernel * mask.detach()).view(o * i, 1, -1))
+        for weight, mask in zip(self.weights, self.masks):
+            weights = torch.bmm(
+                batch1 = weights.view(o * i, -1, 1),
+                batch2 = (weight * mask.detach()).view(o * i, 1, -1)
+            )
 
         if self.kernel_rotate:
-            kernels = grid_sample(
-                input = kernels.view(o * i, 1, k, k, k),
+            weights = grid_sample(
+                input = weights.view(o * i, 1, k, k, k),
                 grid = tx.rotate_grid(
                     theta_n = self.theta_n,
                     theta_r = self.theta_r,
@@ -73,7 +76,7 @@ class ConvRotate3d(nn.Module):
 
         outputs = conv3d(
             input = inputs,
-            weight = kernels.view(o, i, k, k, k),
+            weight = weights.view(o, i, k, k, k),
             bias = self.bias,
             stride = self.stride,
             padding = self.padding,
@@ -111,15 +114,15 @@ class ConvRotateNet3d(nn.Module):
             backend = backend,
             normalization = nn.BatchNorm3d,
             activation = nn.LeakyReLU,
-            subsampling = nn.AvgPool3d,
+            subsampling = nn.MaxPool3d,
             last_activation = True
         )
 
         self.classifier = tx.layers.Linear(
             features = features,
-            bias = True,
+            # bias = True,
             normalization = nn.BatchNorm1d,
-            activation = nn.LeakyReLU
+            activation = nn.ReLU
         )
 
         tx.init_weights(self)

@@ -4,7 +4,7 @@ import argparse
 import os
 
 from learnx.torch.io import *
-from utilx.cli import *
+from utilx import *
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

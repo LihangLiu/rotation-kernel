@@ -65,7 +65,7 @@ if __name__ == '__main__':
         kernel_rotate = args.kernel_rotate
     )
 
-    if 'rot' in args.kernel_mode:
+    if args.kernel_rotate:
         # fixme: clean up
         param_dict = dict(model.named_parameters())
         weight_params = [param_dict[k] for k in param_dict if 'theta' not in k]
@@ -80,7 +80,6 @@ if __name__ == '__main__':
         ]
 
     if args.resume is not None:
-        # fixme: load optimizer
         epoch = tx.load_snapshot(args.resume, model = model, returns = 'epoch')
         print('==> snapshot "{0}" loaded'.format(args.resume))
     else:
