@@ -39,7 +39,7 @@ class ConvRotate3d(nn.Module):
             self.masks.append(nn.Parameter(torch.zeros(*size)))
 
         for weight, mask in zip(self.weights, self.masks):
-            nn.init.normal(weight, mean = 0, std = 0.02)
+            nn.init.xavier_normal(weight, gain = 0.02)
             nn.init.constant(mask, val = 1)
 
         if kernel_rotate is True:
@@ -113,7 +113,6 @@ class ConvRotateNet3d(nn.Module):
 
         self.classifier = tx.layers.Linear(
             features = features,
-            bias = True,
             normalization = nn.BatchNorm1d,
             activation = nn.ReLU
         )
