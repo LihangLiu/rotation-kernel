@@ -39,6 +39,15 @@ class RotationConv3d(nn.Module):
 
         else:
             raise NotImplementedError(kernel_mode)
+            
+        if 'rot' in self.kernel_mode:
+            m = self.i_c * self.o_c
+            self.local_theta_v = nn.Parameter(torch.Tensor(m, 3))    # (n, 3)
+            self.local_theta = nn.Parameter(torch.Tensor(m))         # (n)
+            self.local_theta_v.data.uniform_(-1,1)
+            self.local_theta.data.uniform_(0,np.pi)
+
+            self.local_rotation = FastRotation(m, self.k, padding_mode='zeros')
 
         if 'mn' in self.kernel_mode:
             m = self.i_c * self.o_c
@@ -95,6 +104,10 @@ class RotationConv3d(nn.Module):
 
     def forward(self, input):
         filter = self._get_filter()
+        
+        if 'rot' in self.kernel_mode:
+            filter = self.local_rotation(filter, self.local_theta_v, self.local_theta)
+        
         if 'mn' in self.kernel_mode:
             # m = self.i_c * self.o_c
             # n = self.num_theta
