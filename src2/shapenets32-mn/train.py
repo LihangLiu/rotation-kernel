@@ -70,8 +70,8 @@ if __name__ == '__main__':
     parser.add_argument(
         '--kernel_mode', 
         default = None, 
-        choices = ['3d', '3d_mn_init1', '3d_mn_init2', '3d_mn_init3', '3d_mn_init4', '3d_mn_max_init1',
-            '2d_1d', '2d_1d_mn_init1'
+        choices = ['3d', '3d_mn_init1', '3d_rot_mn_init1', '3d_rot',
+            '2d_1d', '2d_1d_mn_init1', '2d_1d_rot_mn_init1'
         ]
     )
     parser.add_argument('--nf', default = 24, type = int)
@@ -138,8 +138,8 @@ if __name__ == '__main__':
 
     param_dict = dict(net.named_parameters())
     if 'rot' in args.kernel_mode:
-        weight_params = filter_dict(lambda key: 'theta' not in key, param_dict).values()
-        theta_params = filter_dict(lambda key: 'theta' in key, param_dict).values()
+        weight_params = filter_dict(lambda key: 'local_theta' not in key, param_dict).values()
+        theta_params = filter_dict(lambda key: 'local_theta' in key, param_dict).values()
         optimizer = AlterOptim(
             optim0 = opt_class(weight_params, lr=args.lr_base, **opt_args), 
             optim1 = opt_class(theta_params, lr=args.lr_theta, **opt_args), 
